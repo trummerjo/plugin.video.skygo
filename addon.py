@@ -40,13 +40,24 @@ if params:
         initData = base64.urlsafe_b64encode(initData)
         print initData
 
-        listitem = xbmcgui.ListItem(path=playInfo['manifestUrl'])
-        listitem.setProperty('inputstream.smoothstream.license_type', 'com.widevine.alpha')
-        listitem.setProperty('inputstream.smoothstream.license_key', licenseUrl)
-        listitem.setProperty('inputstream.smoothstream.license_data', initData)
-        listitem.setProperty('inputstreamaddon', 'inputstream.smoothstream')
+        li = xbmcgui.ListItem(path=playInfo['manifestUrl'])
 
-        xbmcplugin.setResolvedUrl(addon_handle, True, listitem=listitem)
+        ard = 'http://daserste_live-lh.akamaihd.net/i/daserste_de@91204/master.m3u8'
+        #li = xbmcgui.ListItem(label='test', path=ard)
+
+        info = {
+            'title': 'test',
+            'mediatype': 'movie'
+        }
+        li.setInfo('video', info)
+
+
+        li.setProperty('inputstream.smoothstream.license_type', 'com.widevine.alpha')
+        li.setProperty('inputstream.smoothstream.license_key', licenseUrl)
+        li.setProperty('inputstream.smoothstream.license_data', initData)
+        li.setProperty('inputstreamaddon', 'inputstream.mpd')
+
+        xbmcplugin.setResolvedUrl(addon_handle, True, listitem=li)
 
     elif params['action'] == 'topMovies':
         mostWatchedMovies = skygo.getMostWatched()
@@ -77,6 +88,8 @@ if params:
             li = xbmcgui.ListItem(label=movie['title'])
             li.setArt({'thumb': cover, 'poster': cover, 'fanart': heroImg})
 
+            li.setProperty('IsPlayable', 'true')
+
             info = {
                 'genre': movie['category']['main']['content'],
                 'year': movie['year_of_production'],
@@ -91,7 +104,7 @@ if params:
 
 
             xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
-                                        listitem=li, isFolder=False)
+                                        listitem=li)
 
         xbmcplugin.endOfDirectory(addon_handle, updateListing=True, cacheToDisc=False)
 

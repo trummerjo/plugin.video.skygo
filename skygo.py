@@ -21,7 +21,7 @@ class SkyGo:
     def login(self):
         #Try to login
         password = ''
-        mail = 'wurst%40gmx.de'
+        mail = '%40gmx.de'
         r = requests.get("https://www.skygo.sky.de/SILK/services/public/session/login?version=1354&platform=web&product=SG&email="+mail+"&password="+password+"&remMe=false")
         #Parse jsonp
         responseJson = r.text[3:-1]
