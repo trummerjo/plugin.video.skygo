@@ -1,4 +1,5 @@
 import sys
+import xbmcaddon
 import xbmcgui
 import xbmc
 import xbmcplugin
@@ -15,6 +16,11 @@ plugin_base_url = sys.argv[0]
 params = dict(urlparse.parse_qsl(sys.argv[2][1:]))
 skygo = SkyGo()
 
+
+addon = xbmcaddon.Addon()
+username = addon.getSetting('email')
+password = addon.getSetting('password')
+
 xbmcplugin.setContent(addon_handle, 'movies')
 
 
@@ -27,11 +33,11 @@ if params:
     if params['action'] == 'play':
         id = params['id']
         xbmc.log('Play SkyGo Movie with id: ' + id)
-        skygo.login()
+        skygo.login(username, password)
         sessionId = skygo.sessionId
 
 
-        licenseUrl = 'https://wvguard.sky.de/WidevineLicenser/WidevineLicenser'
+        licenseUrl = 'https://wvguard.sky.de/WidevineLicenser/WidevineLicenser|User-Agent=Mozilla%2F5.0%20(X11%3B%20Linux%20x86_64)%20AppleWebKit%2F537.36%20(KHTML%2C%20like%20Gecko)%20Chrome%2F49.0.2623.87%20Safari%2F537.36&Referer=http%3A%2F%2Fwww.skygo.sky.de%2Ffilm%2Fscifi--fantasy%2Fjupiter-ascending%2Fasset%2Ffilmsection%2F144836.html&Content-Type=||'
 
 
         playInfo = skygo.getPlayInfo(id)
@@ -55,7 +61,7 @@ if params:
         li.setProperty('inputstream.smoothstream.license_type', 'com.widevine.alpha')
         li.setProperty('inputstream.smoothstream.license_key', licenseUrl)
         li.setProperty('inputstream.smoothstream.license_data', initData)
-        li.setProperty('inputstreamaddon', 'inputstream.mpd')
+        li.setProperty('inputstreamaddon', 'inputstream.smoothstream')
 
         xbmcplugin.setResolvedUrl(addon_handle, True, listitem=li)
 

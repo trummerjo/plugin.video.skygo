@@ -18,13 +18,12 @@ class SkyGo:
         #self.loadMostWatched()
         return
 
-    def login(self):
+    def login(self, username, password):
         #Try to login
-        password = ''
-        mail = '%40gmx.de'
-        r = requests.get("https://www.skygo.sky.de/SILK/services/public/session/login?version=1354&platform=web&product=SG&email="+mail+"&password="+password+"&remMe=false")
+        r = requests.get("https://www.skygo.sky.de/SILK/services/public/session/login?version=1354&platform=web&product=SG&email="+username+"&password="+password+"&remMe=false")
         #Parse jsonp
         responseJson = r.text[3:-1]
+        print responseJson
 
         loginJson = json.loads(responseJson)
         if loginJson['skygoSessionId'] == '':
