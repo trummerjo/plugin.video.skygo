@@ -9,7 +9,8 @@
   </extension>
   <extension point="xbmc.addon.metadata">
     <summary lang="en_gb">Plugin for SkyGo</summary>
-    <description lang="en_gb">Allows you to stream all your content from skygo</description>
+    <description lang="en_gb">Allows you to stream all your content from german skygo. 
+    ***Attention: Addon is unofficial and not related to or supported by Sky Deutschland Fernsehen GmbH & Co. KG***</description>
     <disclaimer lang="en_gb"></disclaimer>
     <language></language>
     <platform>all</platform>
