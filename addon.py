@@ -49,14 +49,13 @@ if params:
         li = xbmcgui.ListItem(path=playInfo['manifestUrl'])
 
         ard = 'http://daserste_live-lh.akamaihd.net/i/daserste_de@91204/master.m3u8'
-        #li = xbmcgui.ListItem(label='test', path=ard)
+        # li = xbmcgui.ListItem(label='test', path=ard)
 
         info = {
             'title': 'test',
             'mediatype': 'movie'
         }
         li.setInfo('video', info)
-
 
         li.setProperty('inputstream.smoothstream.license_type', 'com.widevine.alpha')
         li.setProperty('inputstream.smoothstream.license_key', licenseUrl)
@@ -70,7 +69,7 @@ if params:
         for movie in mostWatchedMovies:
             url = build_url({'action': 'play', 'id': movie['id']})
 
-            #Try to find a hero img
+            # Try to find a hero img
             heroImg = ''
             videoWallImg = ''
             cover = ''
