@@ -14,15 +14,22 @@ from skygo import SkyGo
 addon_handle = int(sys.argv[1])
 plugin_base_url = sys.argv[0]
 params = dict(urlparse.parse_qsl(sys.argv[2][1:]))
-skygo = SkyGo()
 
 
 addon = xbmcaddon.Addon()
+__addonname__ = addon.getAddonInfo('name')
 username = addon.getSetting('email')
 password = addon.getSetting('password')
 
+pluginpath = addon.getAddonInfo('path')
+datapath = xbmc.translatePath(addon.getAddonInfo('profile'))
+cookiePath = datapath + 'COOKIES'
+
+
 xbmcplugin.setContent(addon_handle, 'movies')
 
+
+skygo = SkyGo(cookiePath)
 
 def build_url(query):
     return plugin_base_url + '?' + urllib.urlencode(query)
@@ -33,7 +40,10 @@ if params:
     if params['action'] == 'play':
         id = params['id']
         xbmc.log('Play SkyGo Movie with id: ' + id)
-        skygo.login(username, password)
+
+
+        playStream = skygo.login(username, password)
+
         sessionId = skygo.sessionId
 
 
@@ -42,17 +52,12 @@ if params:
 
         playInfo = skygo.getPlayInfo(id)
         initData = 'kid={UUID}&sessionId='+sessionId+'&apixId='+playInfo['apixId']+'&platformId=WEB&product=BW&channelId='
-        initData = struct.pack('1B',*[30])+initData
+        initData = struct.pack('1B', *[30])+initData
         initData = base64.urlsafe_b64encode(initData)
         print initData
 
         li = xbmcgui.ListItem(path=playInfo['manifestUrl'])
-
-        ard = 'http://daserste_live-lh.akamaihd.net/i/daserste_de@91204/master.m3u8'
-        # li = xbmcgui.ListItem(label='test', path=ard)
-
         info = {
-            'title': 'test',
             'mediatype': 'movie'
         }
         li.setInfo('video', info)
@@ -62,7 +67,7 @@ if params:
         li.setProperty('inputstream.smoothstream.license_data', initData)
         li.setProperty('inputstreamaddon', 'inputstream.smoothstream')
 
-        xbmcplugin.setResolvedUrl(addon_handle, True, listitem=li)
+        xbmcplugin.setResolvedUrl(addon_handle, playStream, listitem=li)
 
     elif params['action'] == 'topMovies':
         mostWatchedMovies = skygo.getMostWatched()

@@ -2,8 +2,14 @@ import requests
 import json
 import base64
 import re
-import cookielib
+import pickle
+import os
 import xml.etree.ElementTree as ET
+import xbmcgui
+
+LOGIN_STATUS = { 'SUCCESS': 'T_100',
+                  'SESSION_INVALID': 'S_218',
+                  'OTHER_SESSION':'T_206' }
 
 
 # https://www.skygo.sky.de/SILK/services/public/session/kill/web?version=12354&platform=web&product=SG&callback=_jqjsp&_1460245964532=
@@ -15,79 +21,83 @@ class SkyGo:
     baseUrl = "http://www.skygo.sky.de"
 
 
-    def __init__(self):
+    def __init__(self, cookiePath):
         self.sessionId = ''
-        self.manifest = ''
-        self.customerCode = ''
-        #self.login()
-        #self.loadMostWatched()
+        self.cookiePath = cookiePath
+
+        # Create session with old cookies
+        self.session = requests.session()
+
+        if os.path.isfile(cookiePath):
+            with open(cookiePath) as f:
+                cookies = requests.utils.cookiejar_from_dict(pickle.load(f))
+                self.session = requests.session()
+                self.session.cookies = cookies
+
+
         return
+
+    def isLoggedIn(self):
+        """Check if User is still logged in with the old cookies"""
+        r = self.session.get('https://www.skygo.sky.de/SILK/services/public/user/getdata?product=SG&platform=web&version=12354')
+        #Parse json
+        response = r.text[3:-1]
+        response = json.loads(response)
+
+        print response
+
+        if response['resultMessage'] == 'OK':
+            self.sessionId = response['skygoSessionId']
+            print "User still logged in"
+            return True
+        else:
+            print "User not logged in or Session on other device"
+            if response['resultCode'] == LOGIN_STATUS['SESSION_INVALID']:
+                print 'Session invalid - Customer Code not found in SilkCache'
+                return False
+
+
+
+    def killSessions(self):
+        # Kill other sessions
+        r = self.session.get('https://www.skygo.sky.de/SILK/services/public/session/kill/web?version=12354&platform=web&product=SG')
+        print r.text
+
+    def sendLogin(self, username, password):
+        # Try to login
+        r = self.session.get("https://www.skygo.sky.de/SILK/services/public/session/login?version=1354&platform=web&product=SG&email="+username+"&password="+password+"&remMe=true")
+        #Parse jsonp
+        response = r.text[3:-1]
+        response = json.loads(response)
+        return response
 
     def login(self, username, password):
 
-        session = requests.Session()
+        # If already logged in and active session everything is fine
+        if not self.isLoggedIn():
 
+            #remove old cookies
+            self.session.cookies.clear_session_cookies()
+            response = self.sendLogin(username, password)
+            print response
 
+            # if login is correct but other session is active ask user if other session should be killed
+            if response['resultCode'] == 'T_206':
+                killSession = xbmcgui.Dialog().yesno('Sie sind bereits eingeloggt!','Sie sind bereits auf einem anderen Geraet oder mit einem anderen Browser eingeloggt. Wollen Sie die bestehende Sitzung beenden und sich jetzt hier neu anmelden?')
+                if killSession:
+                    self.killSessions()
+                    self.sendLogin(username, password)
+                    self.isLoggedIn()
+                    # Save the cookies
+                    with open(self.cookiePath, 'w') as f:
+                        pickle.dump(requests.utils.dict_from_cookiejar(self.session.cookies), f)
+                    return True
+                return False
+            elif response['resultMessage'] == 'KO':
+                xbmcgui.Dialog().ok('Login Fehler', 'Login fehlgeschlagen. Bitte Login Daten ueberpruefen'.encode('utf-8'))
+                return False
 
-
-        r = session.get('http://www.skygo.sky.de/film/scifi--fantasy/jupiter-ascending/asset/filmsection/144836.html?sessionAction=login')
-
-
-        #Try to login
-        r = session.get("https://www.skygo.sky.de/SILK/services/public/session/login?version=1354&platform=web&product=SG&email="+username+"&password="+password+"&remMe=true")
-        #Parse jsonp
-        responseJson = r.text[3:-1]
-        print r.request.headers
-        print responseJson
-        loginJson = json.loads(responseJson)
-
-        if loginJson['skygoSessionId'] == '':
-            print 'Login Failed'
-            return False
-        else:
-            self.sessionId = loginJson['skygoSessionId']
-
-
-
-            ck = cookielib.Cookie(version=0, name='siss', value=self.sessionId, port=None, port_specified=False, domain='www.skygo.sky.de', domain_specified=False, domain_initial_dot=False, path='/', path_specified=True, secure=False, expires=None, discard=True, comment=None, comment_url=None, rest={'HttpOnly': None}, rfc2109=False)
-            session.cookies.set_cookie(ck)
-
-            # r = session.get('http://www.skygo.sky.de/film/scifi--fantasy/jupiter-ascending/asset/filmsection/144836.html?sessionAction=login')
-
-
-            # Kill other sessions
-            print '######################### KILL SESSIONS: '
-            r = session.get('https://www.skygo.sky.de/SILK/services/public/session/kill/web?version=12354&platform=web&product=SG')
-            print r.request.headers
-            print r.text
-            print 'END #################################################'
-
-
-            #Try to login
-            r = session.get("https://www.skygo.sky.de/SILK/services/public/session/login?version=1354&platform=web&product=SG&email="+username+"&password="+password+"&remMe=true")
-            #Parse jsonp
-            responseJson = r.text[3:-1]
-            print r.request.headers
-            print responseJson
-            loginJson = json.loads(responseJson)
-            self.sessionId = loginJson['skygoSessionId']
-
-
-            print '######################################## GET DATA!!!'
-            r = session.get('https://www.skygo.sky.de/SILK/services/public/user/getdata?product=SG&platform=web&version=12354')
-            print r.request.headers
-            print r.text
-            for cookie in session.cookies:
-                print (cookie.name,cookie.value)
-            print 'END ##################################################'
-
-
-
-            print self.sessionId
-            print 'Login succ'
-            return True
-
-    # def cws(self):
+        return True
 
     def getPlayInfo(self, id):
         ns = {'media': 'http://search.yahoo.com/mrss/', 'skyde': 'http://sky.de/mrss_extensions/'}
