@@ -1,7 +1,8 @@
 import requests
 import json
-import base64
 import re
+import datetime
+import time
 import pickle
 import os
 import xml.etree.ElementTree as ET
@@ -13,12 +14,9 @@ LOGIN_STATUS = { 'SUCCESS': 'T_100',
                   'OTHER_SESSION':'T_206' }
 
 
-# https://www.skygo.sky.de/SILK/services/public/session/kill/web?version=12354&platform=web&product=SG&callback=_jqjsp&_1460245964532=
-# => kill old session => dann normales login
-
 addon = xbmcaddon.Addon()
 autoKillSession = addon.getSetting('autoKillSession')
-print "AUTO KILL SESSION " + autoKillSession
+
 
 class SkyGo:
     """Sky Go Class"""
@@ -81,11 +79,9 @@ class SkyGo:
 
         # If already logged in and active session everything is fine
         if not self.isLoggedIn():
-
             #remove old cookies
             self.session.cookies.clear_session_cookies()
             response = self.sendLogin(username, password)
-            print response
 
             # if login is correct but other session is active ask user if other session should be killed
             if response['resultCode'] == 'T_206':
@@ -94,8 +90,11 @@ class SkyGo:
                     killSession = xbmcgui.Dialog().yesno('Sie sind bereits eingeloggt!','Sie sind bereits auf einem anderen Geraet oder mit einem anderen Browser eingeloggt. Wollen Sie die bestehende Sitzung beenden und sich jetzt hier neu anmelden?')
 
                 if killSession:
+                    # Kill all Sessions (including ours)
                     self.killSessions()
+                    # Session killed so login again
                     self.sendLogin(username, password)
+                    # Activate Session
                     self.isLoggedIn()
                     # Save the cookies
                     with open(self.cookiePath, 'w') as f:
@@ -103,7 +102,7 @@ class SkyGo:
                     return True
                 return False
             elif response['resultMessage'] == 'KO':
-                xbmcgui.Dialog().ok('Login Fehler', 'Login fehlgeschlagen. Bitte Login Daten ueberpruefen'.encode('utf-8'))
+                xbmcgui.Dialog().notification('Login Fehler', 'Login fehlgeschlagen. Bitte Login Daten ueberpruefen', icon=xbmcgui.NOTIFICATION_ERROR)
                 return False
             elif response['resultCode'] == 'T_100':
                 # Activate Session with new test if user is logged in
@@ -115,25 +114,53 @@ class SkyGo:
         # If any case is not matched return login failed
         return False
 
-    def getPlayInfo(self, id):
+    def getPlayInfo(self, id='', url=''):
         ns = {'media': 'http://search.yahoo.com/mrss/', 'skyde': 'http://sky.de/mrss_extensions/'}
-        url = self.baseUrl+"/sg/multiplatform/web/xml/player_playlist/asset/" + str(id) + ".xml"
-        r = requests.get(url)
-        tree = ET.ElementTree(ET.fromstring(r.text.encode('utf-8')))
-        root = tree.getroot()
-        manifestUrl = root.find('channel/item/media:content', ns).attrib['url']
-        apixId = root.find('channel/item/skyde:apixEventId',ns).text
-        return {'manifestUrl': manifestUrl, 'apixId': apixId}
 
-    def getLivePlayInfo(self, url):
-        ns = {'media': 'http://search.yahoo.com/mrss/', 'skyde': 'http://sky.de/mrss_extensions/'}
-        url = self.baseUrl+url
+        # If no url is given we assume that the url hast to be build with the id
+        if url == '':
+            url = self.baseUrl+"/sg/multiplatform/web/xml/player_playlist/asset/" + str(id) + ".xml"
+
         r = requests.get(url)
         tree = ET.ElementTree(ET.fromstring(r.text.encode('utf-8')))
         root = tree.getroot()
         manifestUrl = root.find('channel/item/media:content', ns).attrib['url']
         apixId = root.find('channel/item/skyde:apixEventId',ns).text
-        return {'manifestUrl': manifestUrl, 'apixId': apixId}
+        duration = root.find('channel/item/skyde:duration', ns).text
+
+        return {'manifestUrl': manifestUrl, 'apixId': apixId, 'duration': duration}
+
+    def getCurrentEvent(self, epg_channel_id):
+        # Save date for fure use
+        now = datetime.datetime.now()
+        current_date = now.strftime("%d.%m.%Y")
+        # Get Epg information
+        print 'http://www.skygo.sky.de/epgd/sg/web/eventList/'+current_date+'/'+epg_channel_id+'/'
+        r = requests.get('http://www.skygo.sky.de/epgd/sg/web/eventList/'+current_date+'/'+epg_channel_id+'/')
+        events = r.json()[epg_channel_id]
+        for event in events:
+            start_date = datetime.datetime(*(time.strptime(event['startDate'] + ' ' + event['startTime'], '%d.%m.%Y %H:%M')[0:6]))
+            end_date = datetime.datetime(*(time.strptime(event['endDate'] + ' ' + event['endTime'], '%d.%m.%Y %H:%M')[0:6]))
+            # Check if event is running event
+            if start_date < now < end_date:
+                return event
+        # Return False if no current running event
+        return False
+
+    def getEventPlayInfo(self, event_id, epg_channel_id):
+        # If not Sky news then get details id else use hardcoded playinfo_url
+        if epg_channel_id != '17':
+            r = requests.get('http://www.skygo.sky.de/epgd/sg/web/eventDetail/'+event_id+'/'+epg_channel_id+'/')
+            event_details_link = r.json()['detailPage']
+            # Extract id from details link
+            p = re.compile('/([0-9]*)\.html', re.IGNORECASE)
+            m = re.search(p, event_details_link)
+            playlist_id = m.group(1)
+            playinfo_url = self.baseUrl+'/sg/multiplatform/web/xml/player_playlist/asset/' + playlist_id + '.xml'
+        else:
+            playinfo_url = self.baseUrl+'/sg/multiplatform/web/xml/player_playlist/ssn/127.xml'
+
+        return self.getPlayInfo(url=playinfo_url)
 
 
     def getMostWatched(self):
@@ -149,47 +176,5 @@ class SkyGo:
         channels = [c for c in channels if c['mediaurl'] != '']
 
         return channels
-
-
-    def loadMovieListing(self, id):
-
-
-        id = 144836 #jupiter ascending
-
-        ns = {'media': 'http://search.yahoo.com/mrss/', 'skyde': 'http://sky.de/mrss_extensions/'}
-
-        url = "http://www.skygo.sky.de/sg/multiplatform/web/xml/player_playlist/asset/" + str(id) + ".xml"
-        r = requests.get(url)
-        tree = ET.ElementTree(ET.fromstring(r.text.encode('utf-8')))
-        root = tree.getroot()
-        content = root.find('channel/item/media:content', ns)
-        manifestUrl = content.attrib['url']
-        self.manifest = SkyGoManifest(manifestUrl)
-
-
-class SkyGoManifest:
-    """Sky Go Manifest Class"""
-
-    def __init__(self, url):
-        self.protectionHeader = ''
-
-
-        self.load(url)
-        return
-
-    def load(self, url):
-        r = requests.get(url)
-        root = ET.fromstring(r.text.encode('utf-8')[4:])
-        content = root.find('Protection/ProtectionHeader')
-
-        base64Protection = content.text
-        base64Protection = base64Protection.replace(" ", "")
-
-        xml = base64.decodestring(base64Protection)
-
-        p = re.compile('<KID>(.*?)</KID>', re.IGNORECASE)
-
-        m = re.search(p, str(xml).decode('utf-16'))
-        print m.group(1)
 
 

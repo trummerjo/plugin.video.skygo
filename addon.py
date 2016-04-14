@@ -7,16 +7,13 @@ import urllib
 import base64
 import urlparse
 import struct
-import requests
-import re
-import datetime
-import time
 
 from skygo import SkyGo
 
 addon_handle = int(sys.argv[1])
 plugin_base_url = sys.argv[0]
 params = dict(urlparse.parse_qsl(sys.argv[2][1:]))
+licenseUrl = 'https://wvguard.sky.de/WidevineLicenser/WidevineLicenser|User-Agent=Mozilla%2F5.0%20(X11%3B%20Linux%20x86_64)%20AppleWebKit%2F537.36%20(KHTML%2C%20like%20Gecko)%20Chrome%2F49.0.2623.87%20Safari%2F537.36&Referer=http%3A%2F%2Fwww.skygo.sky.de%2Ffilm%2Fscifi--fantasy%2Fjupiter-ascending%2Fasset%2Ffilmsection%2F144836.html&Content-Type=||'
 
 
 addon = xbmcaddon.Addon()
@@ -32,104 +29,45 @@ cookiePath = datapath + 'COOKIES'
 xbmcplugin.setContent(addon_handle, 'movies')
 
 
+
 skygo = SkyGo(cookiePath)
+
 
 def build_url(query):
     return plugin_base_url + '?' + urllib.urlencode(query)
 
 
-
 if params:
-    if params['action'] == 'play':
-        id = params['id']
-        error = False
+    if params['action'] == 'playLive':
+        epg_channel_id = params['id']
+        # Get Current running event on channel
+        current_event = skygo.getCurrentEvent(epg_channel_id)
 
-        # Check if is LiveTV
-        liveTv = False
-        if 'liveTv' in params:
+        # If there is a running event play it
+        if current_event is not False:
+            event_id = current_event['id']
+            playInfo = skygo.getEventPlayInfo(event_id, epg_channel_id)
 
-            now = datetime.datetime.now()
-            currentDate = now.strftime("%d.%m.%Y")
-
-            # Get Epg information
-            print 'http://www.skygo.sky.de/epgd/sg/web/eventList/'+currentDate+'/'+id+'/'
-            r = requests.get('http://www.skygo.sky.de/epgd/sg/web/eventList/'+currentDate+'/'+id+'/')
-            # print r.json()
-            epgJson = r.json()[id]
-            runningProgram = ''
-            for entry in epgJson:
-                startDateStr = entry['startDate'] + ' ' + entry['startTime']
-                endDateStr = entry['endDate'] + ' ' + entry['endTime']
-                startDate = datetime.datetime(*(time.strptime(startDateStr, '%d.%m.%Y %H:%M')[0:6]))
-                endDate = datetime.datetime(*(time.strptime(endDateStr, '%d.%m.%Y %H:%M')[0:6]))
-                # Check if Program is running program
-                if startDate < now < endDate:
-                    runningProgram = entry
-                    break
-
-            if runningProgram is not '':
-                entryId = runningProgram['id']
-                print 'http://www.skygo.sky.de/epgd/sg/web/eventDetail/'+entryId+'/'+id+'/'
-                r = requests.get('http://www.skygo.sky.de/epgd/sg/web/eventDetail/'+entryId+'/'+id+'/')
-                eventDetail = r.json()
-
-                # If not live it is a vod - do some magic do get asset id
-                if runningProgram['live'] == 0:
-                    detailsLink = eventDetail['detailPage']
-                    # Extract id from details link
-                    p = re.compile('/([0-9]*)\.html', re.IGNORECASE)
-                    m = re.search(p, detailsLink)
-                    detailId = m.group(1)
-                    print 'Detail Id: ' + detailId
-
-                    id = detailId
-            else:
-                xbmcgui.Dialog().ok('Kein Programm', 'Auf diesem Kanal ist kein aktuelles Programm vorhanden.')
-                # Do not play stream
-                error = True
-
-            print params['mediaUrl']
-            liveTv = True
-
-        if not error:
-            login = skygo.login(username, password)
-            sessionId = skygo.sessionId
-            licenseUrl = 'https://wvguard.sky.de/WidevineLicenser/WidevineLicenser|User-Agent=Mozilla%2F5.0%20(X11%3B%20Linux%20x86_64)%20AppleWebKit%2F537.36%20(KHTML%2C%20like%20Gecko)%20Chrome%2F49.0.2623.87%20Safari%2F537.36&Referer=http%3A%2F%2Fwww.skygo.sky.de%2Ffilm%2Fscifi--fantasy%2Fjupiter-ascending%2Fasset%2Ffilmsection%2F144836.html&Content-Type=||'
-
-            playInfo = ''
-            manifestUrl = ''
-            if not liveTv:
-                playInfo = skygo.getPlayInfo(id)
-                apixId = playInfo['apixId']
-                manifestUrl = playInfo['manifestUrl']
-            else:
-                print id
-                # Sport News has fixed playinfourl
-                playInfoUrl = '/sg/multiplatform/web/xml/player_playlist/ssn/127.xml'
-                if id != '17':
-                    playInfoUrl = '/sg/multiplatform/web/xml/player_playlist/asset/' + str(id) + '.xml'
-
-                print 'Playinfourl: ' + playInfoUrl
-
-                playInfo = skygo.getLivePlayInfo(playInfoUrl)
-                apixId = playInfo['apixId']
-                manifestUrl = playInfo['manifestUrl']
+            apixId = playInfo['apixId']
+            manifestUrl = playInfo['manifestUrl']
 
             print "#######################################################"
             print "ApixID: " + apixId + " manifestUrl: " + manifestUrl
             print "#######################################################"
 
+            # Login to get session
+            login = skygo.login(username, password)
+            sessionId = skygo.sessionId
+
             # create init data for licence acquiring
             initData = 'kid={UUID}&sessionId='+sessionId+'&apixId='+apixId+'&platformId=WEB&product=BW&channelId='
             initData = struct.pack('1B', *[30])+initData
             initData = base64.urlsafe_b64encode(initData)
-            print initData
 
-
-
+            # Create list item with inputstream addon
             li = xbmcgui.ListItem(path=manifestUrl)
             info = {
-                'mediatype': 'movie'
+                'mediatype': 'movie',
             }
             li.setInfo('video', info)
 
@@ -138,17 +76,59 @@ if params:
             li.setProperty('inputstream.smoothstream.license_data', initData)
             li.setProperty('inputstreamaddon', 'inputstream.smoothstream')
 
-            # Check if the Stream is playable
-            playStream = True
-            if not login:
-                playStream = False
+            xbmcplugin.setResolvedUrl(addon_handle, True, listitem=li)
 
-            xbmcplugin.setResolvedUrl(addon_handle, playStream, listitem=li)
+
+        else:
+            xbmcgui.Dialog().notification('Kein laufendes Event', 'Auf diesem Kanal ist kein laufendes Event vorhanden.', icon=xbmcgui.NOTIFICATION_WARNING)
+
+
+
+
+    if params['action'] == 'playVod':
+        id = params['id']
+        login = skygo.login(username, password)
+
+        if login:
+            sessionId = skygo.sessionId
+            # Get the play info via the id of the video
+            playInfo = skygo.getPlayInfo(id=id)
+            apixId = playInfo['apixId']
+            manifestUrl = playInfo['manifestUrl']
+            duration = int(playInfo['duration'])*60
+
+
+            # create init data for licence acquiring
+            initData = 'kid={UUID}&sessionId='+sessionId+'&apixId='+apixId+'&platformId=WEB&product=BW&channelId='
+            initData = struct.pack('1B', *[30])+initData
+            initData = base64.urlsafe_b64encode(initData)
+            print initData
+
+
+            # Prepare new ListItem to start playback
+            li = xbmcgui.ListItem(path=manifestUrl)
+            info = {
+                'mediatype': 'movie',
+                'duration': duration
+            }
+            li.setInfo('video', info)
+
+            # Force smoothsteam addon
+            li.setProperty('inputstream.smoothstream.license_type', 'com.widevine.alpha')
+            li.setProperty('inputstream.smoothstream.license_key', licenseUrl)
+            li.setProperty('inputstream.smoothstream.license_data', initData)
+            li.setProperty('inputstreamaddon', 'inputstream.smoothstream')
+
+            # Start Playing
+            xbmcplugin.setResolvedUrl(addon_handle, True, listitem=li)
+        else:
+            xbmcgui.Dialog().notification('SkyGo Fehler', 'Fehler bei Login', xbmcgui.NOTIFICATION_ERROR, 2000, True)
+            print 'Fehler beim Einloggen'
 
     elif params['action'] == 'topMovies':
         mostWatchedMovies = skygo.getMostWatched()
         for movie in mostWatchedMovies:
-            url = build_url({'action': 'play', 'id': movie['id']})
+            url = build_url({'action': 'playVod', 'id': movie['id']})
 
             # Try to find a hero img
             heroImg = ''
@@ -179,7 +159,7 @@ if params:
                 'title': movie['title'],
                 'mediatype': 'movie',
                 'originaltitle': movie['original_title'],
-                'plot': movie['synopsis']
+                'plot': movie['synopsis'],
             }
             li.setInfo('video', info)
 
@@ -194,7 +174,7 @@ if params:
     elif params['action'] == 'liveTv':
         channels = skygo.getChannels()
         for channel in channels:
-            url = build_url({'action': 'play', 'id': channel['id'], 'liveTv': 'True', 'mediaUrl': channel['mediaurl']})
+            url = build_url({'action': 'playLive', 'id': channel['id'], 'liveTv': 'True', 'mediaUrl': channel['mediaurl']})
 
             print channel
 
