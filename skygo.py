@@ -6,6 +6,7 @@ import pickle
 import os
 import xml.etree.ElementTree as ET
 import xbmcgui
+import xbmcaddon
 
 LOGIN_STATUS = { 'SUCCESS': 'T_100',
                   'SESSION_INVALID': 'S_218',
@@ -14,6 +15,10 @@ LOGIN_STATUS = { 'SUCCESS': 'T_100',
 
 # https://www.skygo.sky.de/SILK/services/public/session/kill/web?version=12354&platform=web&product=SG&callback=_jqjsp&_1460245964532=
 # => kill old session => dann normales login
+
+addon = xbmcaddon.Addon()
+autoKillSession = addon.getSetting('autoKillSession')
+print "AUTO KILL SESSION " + autoKillSession
 
 class SkyGo:
     """Sky Go Class"""
@@ -55,6 +60,7 @@ class SkyGo:
             if response['resultCode'] == LOGIN_STATUS['SESSION_INVALID']:
                 print 'Session invalid - Customer Code not found in SilkCache'
                 return False
+        return False
 
 
 
@@ -83,7 +89,10 @@ class SkyGo:
 
             # if login is correct but other session is active ask user if other session should be killed
             if response['resultCode'] == 'T_206':
-                killSession = xbmcgui.Dialog().yesno('Sie sind bereits eingeloggt!','Sie sind bereits auf einem anderen Geraet oder mit einem anderen Browser eingeloggt. Wollen Sie die bestehende Sitzung beenden und sich jetzt hier neu anmelden?')
+                killSession = autoKillSession
+                if not killSession:
+                    killSession = xbmcgui.Dialog().yesno('Sie sind bereits eingeloggt!','Sie sind bereits auf einem anderen Geraet oder mit einem anderen Browser eingeloggt. Wollen Sie die bestehende Sitzung beenden und sich jetzt hier neu anmelden?')
+
                 if killSession:
                     self.killSessions()
                     self.sendLogin(username, password)
@@ -96,12 +105,29 @@ class SkyGo:
             elif response['resultMessage'] == 'KO':
                 xbmcgui.Dialog().ok('Login Fehler', 'Login fehlgeschlagen. Bitte Login Daten ueberpruefen'.encode('utf-8'))
                 return False
+            elif response['resultCode'] == 'T_100':
+                # Activate Session with new test if user is logged in
+                self.isLoggedIn()
+                return True
+        else:
+            return True
 
-        return True
+        # If any case is not matched return login failed
+        return False
 
     def getPlayInfo(self, id):
         ns = {'media': 'http://search.yahoo.com/mrss/', 'skyde': 'http://sky.de/mrss_extensions/'}
         url = self.baseUrl+"/sg/multiplatform/web/xml/player_playlist/asset/" + str(id) + ".xml"
+        r = requests.get(url)
+        tree = ET.ElementTree(ET.fromstring(r.text.encode('utf-8')))
+        root = tree.getroot()
+        manifestUrl = root.find('channel/item/media:content', ns).attrib['url']
+        apixId = root.find('channel/item/skyde:apixEventId',ns).text
+        return {'manifestUrl': manifestUrl, 'apixId': apixId}
+
+    def getLivePlayInfo(self, url):
+        ns = {'media': 'http://search.yahoo.com/mrss/', 'skyde': 'http://sky.de/mrss_extensions/'}
+        url = self.baseUrl+url
         r = requests.get(url)
         tree = ET.ElementTree(ET.fromstring(r.text.encode('utf-8')))
         root = tree.getroot()
@@ -121,6 +147,7 @@ class SkyGo:
         channels = r.json()['channelList']
         # Filter for channels with mediaurl
         channels = [c for c in channels if c['mediaurl'] != '']
+
         return channels
 
 
