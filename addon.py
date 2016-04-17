@@ -29,7 +29,6 @@ datapath = xbmc.translatePath(addon.getAddonInfo('profile'))
 cookiePath = datapath + 'COOKIES'
 
 
-xbmcplugin.setContent(addon_handle, 'movies')
 
 
 skygo = SkyGo(cookiePath)
@@ -147,6 +146,7 @@ if params:
 
     elif params['action'] == 'topMovies':
         mostWatchedMovies = skygo.getMostWatched()
+        xbmcplugin.setContent(addon_handle, 'movies')
         for movie in mostWatchedMovies:
             url = build_url({'action': 'play', 'id': movie['id']})
 
@@ -188,11 +188,12 @@ if params:
             xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
                                         listitem=li)
 
-        xbmcplugin.endOfDirectory(addon_handle, updateListing=True, cacheToDisc=False)
+        xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=False)
 
 
     elif params['action'] == 'liveTv':
         channels = skygo.getChannels()
+        xbmcplugin.setContent(addon_handle, 'videos')
         for channel in channels:
             url = build_url({'action': 'play', 'id': channel['id'], 'liveTv': 'True', 'mediaUrl': channel['mediaurl']})
 
@@ -201,12 +202,15 @@ if params:
 
             li = xbmcgui.ListItem(label=channel['name'])
             li.setProperty('IsPlayable', 'true')
-            li.setArt({'poster': skygo.baseUrl+channel['logo']})
-
+            li.setArt({'thumb': skygo.baseUrl+channel['logo']})
+            info = {
+                'mediatype': 'video'
+            }
+            li.setInfo('video', info)
             xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
                                         listitem=li, isFolder=False)
 
-        xbmcplugin.endOfDirectory(addon_handle, updateListing=True, cacheToDisc=False)
+        xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=False)
 
 
 
@@ -215,12 +219,12 @@ else:
     url = build_url({'action': 'topMovies'})
     li = xbmcgui.ListItem(label='Top Filme')
     xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
-                                        listitem=li, isFolder=True)
+                                listitem=li, isFolder=True)
 
     url = build_url({'action': 'liveTv'})
     li = xbmcgui.ListItem(label='Live TV')
     xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
-                                        listitem=li, isFolder=True)
+                                listitem=li, isFolder=True)
 
 
-    xbmcplugin.endOfDirectory(addon_handle, updateListing=True, cacheToDisc=False)
+    xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=False)
