@@ -158,6 +158,7 @@ if params:
 
             info = {}
             label = 'label'
+            print asset['type']
             if asset['type'] == 'Episode':
                 if 'season_nr' not in asset:
                     asset['season_nr'] = '??'
@@ -172,7 +173,7 @@ if params:
                     'plot': asset['synopsis'],
                 }
 
-            elif asset['type'] == 'Movie':
+            elif asset['type'] == 'Movie' or asset['type'] == 'Film':
                 info = {
                     'genre': asset['category']['main']['content'],
                     'year': asset['year_of_production'],
