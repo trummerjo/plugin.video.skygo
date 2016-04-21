@@ -124,19 +124,26 @@ if params:
             xbmcgui.Dialog().notification('SkyGo Fehler', 'Fehler bei Login', xbmcgui.NOTIFICATION_ERROR, 2000, True)
             print 'Fehler beim Einloggen'
 
-    elif params['action'] == 'topMovies':
-        mostWatchedMovies = skygo.getMostWatched()
+    elif params['action'] == 'listing':
+
+        assets = skygo.getListing(params['path'])
         xbmcplugin.setContent(addon_handle, 'movies')
-        for movie in mostWatchedMovies:
-            url = build_url({'action': 'playVod', 'id': movie['id']})
+
+
+        for asset in assets:
+            url = build_url({'action': 'playVod', 'id': asset['id']})
+
+            print asset
 
             # Try to find a hero img
             heroImg = ''
             videoWallImg = ''
             cover = ''
 
+            print asset['type']
 
-            for image in movie['main_picture']['picture']:
+
+            for image in asset['main_picture']['picture']:
                 if image['type'] == 'hero_img':
                     heroImg = skygo.baseUrl + image['path'] + '/' + image['file']
                 if image['type'] == 'videowall_home':
@@ -144,23 +151,55 @@ if params:
                 if image['type'] == 'gallery':
                     cover = skygo.baseUrl + image['path'] + '/' + image['file']
 
-            if movie['dvd_cover']:
-                cover = skygo.baseUrl + movie['dvd_cover']['path'] + '/' + movie['dvd_cover']['file']
+            if asset['dvd_cover']:
+                cover = skygo.baseUrl + asset['dvd_cover']['path'] + '/' + asset['dvd_cover']['file']
 
-            li = xbmcgui.ListItem(label=movie['title'])
+
+
+            info = {}
+            label = 'label'
+            if asset['type'] == 'Episode':
+                if 'season_nr' not in asset:
+                    asset['season_nr'] = '??'
+                label = asset['serie_title'] + ' S'+str(asset['season_nr'])+'E'+str(asset['episode_nr'])
+                info = {
+                    'genre': asset['category']['main']['content'],
+                    'year': asset['year_of_production'],
+                    'mpaa': asset['parental_rating']['value'],
+                    'title': asset['serie_title'] + ' E'+str(asset['episode_nr']),
+                    'mediatype': 'movie',
+                    'originaltitle': asset['original_title'],
+                    'plot': asset['synopsis'],
+                }
+
+            elif asset['type'] == 'Movie':
+                info = {
+                    'genre': asset['category']['main']['content'],
+                    'year': asset['year_of_production'],
+                    'mpaa': asset['parental_rating']['value'],
+                    'title': asset['title'],
+                    'mediatype': 'movie',
+                    'originaltitle': asset['original_title'],
+                    'plot': asset['synopsis'],
+                }
+                label = asset['title']
+
+            elif asset['type'] == 'Series':
+                url = build_url({'action': 'listSeries', 'id': asset['id']})
+                info = {
+                    'genre': asset['category']['main']['content'],
+                    'title': asset['title'],
+                    'mediatype': 'movie',
+                    'originaltitle': asset['original_title'],
+                    'plot': asset['synopsis'],
+                }
+                label = asset['title']
+
+            li = xbmcgui.ListItem(label=label)
             li.setArt({'thumb': cover, 'poster': cover, 'fanart': heroImg})
 
             li.setProperty('IsPlayable', 'true')
 
-            info = {
-                'genre': movie['category']['main']['content'],
-                'year': movie['year_of_production'],
-                'mpaa': movie['parental_rating']['value'],
-                'title': movie['title'],
-                'mediatype': 'movie',
-                'originaltitle': movie['original_title'],
-                'plot': movie['synopsis'],
-            }
             li.setInfo('video', info)
 
 
@@ -171,14 +210,73 @@ if params:
         xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=False)
 
 
+
+    elif params['action'] == 'listSeries':
+
+        series = skygo.getSeriesInfo(params['id'])
+        xbmcplugin.setContent(addon_handle, 'movies')
+
+        for season in series['seasons']['season']:
+            print season
+
+            for episode in season['episodes']:
+                url = build_url({'action': 'playVod', 'id': episode['id']})
+
+                print episode
+
+                # Try to find a hero img
+                heroImg = ''
+                videoWallImg = ''
+                cover = ''
+
+                for image in episode['main_picture']['picture']:
+                    if image['type'] == 'hero_img':
+                        heroImg = skygo.baseUrl + image['path'] + '/' + image['file']
+                    if image['type'] == 'videowall_home':
+                        videoWallImg = skygo.baseUrl + image['path'] + '/' + image['file']
+                    if image['type'] == 'gallery':
+                        cover = skygo.baseUrl + image['path'] + '/' + image['file']
+
+                if episode['dvd_cover']:
+                    cover = skygo.baseUrl + episode['dvd_cover']['path'] + '/' + episode['dvd_cover']['file']
+
+
+
+                info = {}
+                label = 'label'
+                if episode['type'] == 'Episode':
+                    if 'season_nr' not in episode:
+                        episode['season_nr'] = '??'
+                    label = episode['serie_title'] + ' S'+str(episode['season_nr'])+'E'+str(episode['episode_nr'])
+                    info = {
+                        'genre': episode['category']['main']['content'],
+                        'year': episode['year_of_production'],
+                        'mpaa': episode['parental_rating']['value'],
+                        'title': episode['serie_title'] + ' E'+str(episode['episode_nr']),
+                        'mediatype': 'movie',
+                        'originaltitle': episode['original_title'],
+                        'plot': episode['synopsis'],
+                    }
+                li = xbmcgui.ListItem(label=label)
+                li.setArt({'thumb': cover, 'poster': cover, 'fanart': heroImg})
+
+                li.setProperty('IsPlayable', 'true')
+
+                li.setInfo('video', info)
+
+
+
+                xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
+                                            listitem=li)
+
+        xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=False)
+
+
     elif params['action'] == 'liveTv':
         channels = skygo.getChannels()
         xbmcplugin.setContent(addon_handle, 'videos')
         for channel in channels:
             url = build_url({'action': 'playLive', 'id': channel['id'], 'liveTv': 'True', 'mediaUrl': channel['mediaurl']})
-
-            print channel
-
 
             li = xbmcgui.ListItem(label=channel['name'])
             li.setProperty('IsPlayable', 'true')
@@ -192,19 +290,31 @@ if params:
 
         xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=False)
 
-
-
 else:
+    landing_page = skygo.getLandingPage()
+
+    keys = ['box_listing', 'listing']
+
+    for key in keys:
+        if key in landing_page:
+            for item in landing_page[key]['item']:
+                url = build_url({'action': 'listing', 'path': item['path']})
+                li = xbmcgui.ListItem(item['title'])
+                xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
+                                            listitem=li, isFolder=True)
+
 
     url = build_url({'action': 'topMovies'})
-    li = xbmcgui.ListItem(label='Top Filme')
+    li = xbmcgui.ListItem('Top Filme')
+    li.setProperty('IsPlayable', 'false')
     xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
                                 listitem=li, isFolder=True)
 
     url = build_url({'action': 'liveTv'})
-    li = xbmcgui.ListItem(label='Live TV')
+    li = xbmcgui.ListItem('Live TV')
+    li.setProperty('IsPlayable', 'false')
     xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
                                 listitem=li, isFolder=True)
 
 
-    xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=False)
+    xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=True)

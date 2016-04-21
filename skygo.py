@@ -13,7 +13,6 @@ LOGIN_STATUS = { 'SUCCESS': 'T_100',
                   'SESSION_INVALID': 'S_218',
                   'OTHER_SESSION':'T_206' }
 
-
 addon = xbmcaddon.Addon()
 autoKillSession = addon.getSetting('autoKillSession')
 
@@ -21,7 +20,7 @@ autoKillSession = addon.getSetting('autoKillSession')
 class SkyGo:
     """Sky Go Class"""
 
-    baseUrl = "http://www.skygo.sky.de"
+    baseUrl = "https://www.skygo.sky.de"
 
 
     def __init__(self, cookiePath):
@@ -36,9 +35,12 @@ class SkyGo:
                 cookies = requests.utils.cookiejar_from_dict(pickle.load(f))
                 self.session = requests.session()
                 self.session.cookies = cookies
-
-
         return
+
+
+    def getLandingPage(self):
+        r = requests.get(self.baseUrl + '/sg/multiplatform/web/json/landingpage/1.json')
+        return r.json()['listing']
 
     def isLoggedIn(self):
         """Check if User is still logged in with the old cookies"""
@@ -168,6 +170,10 @@ class SkyGo:
         mostWatchedJson = r.json()
         return mostWatchedJson['listing']['asset_listing']['asset']
 
+    def getListing(self, path):
+        r = requests.get(self.baseUrl + path)
+        return r.json()['listing']['asset_listing']['asset']
+
 
     def getChannels(self):
         r = requests.get("http://www.skygo.sky.de/epgd/sg/web/channelList")
@@ -176,5 +182,10 @@ class SkyGo:
         channels = [c for c in channels if c['mediaurl'] != '']
 
         return channels
+
+
+    def getSeriesInfo(self, series_id):
+        r = requests.get(self.baseUrl + "/sg/multiplatform/web/json/details/series/"+ series_id +"_global.json")
+        return r.json()['serieRecap']['serie']
 
 
