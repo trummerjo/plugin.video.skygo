@@ -1,3 +1,6 @@
+import base64
+import struct
+
 import requests
 import json
 import re
@@ -6,6 +9,8 @@ import time
 import pickle
 import os
 import xml.etree.ElementTree as ET
+
+import xbmc
 import xbmcgui
 import xbmcaddon
 
@@ -13,9 +18,12 @@ LOGIN_STATUS = { 'SUCCESS': 'T_100',
                   'SESSION_INVALID': 'S_218',
                   'OTHER_SESSION':'T_206' }
 
+licence_url = 'https://wvguard.sky.de/WidevineLicenser/WidevineLicenser|User-Agent=Mozilla%2F5.0%20(X11%3B%20Linux%20x86_64)%20AppleWebKit%2F537.36%20(KHTML%2C%20like%20Gecko)%20Chrome%2F49.0.2623.87%20Safari%2F537.36&Referer=http%3A%2F%2Fwww.skygo.sky.de%2Ffilm%2Fscifi--fantasy%2Fjupiter-ascending%2Fasset%2Ffilmsection%2F144836.html&Content-Type=||'
+
 addon = xbmcaddon.Addon()
 autoKillSession = addon.getSetting('autoKillSession')
-
+datapath = xbmc.translatePath(addon.getAddonInfo('profile'))
+cookiePath = datapath + 'COOKIES'
 
 class SkyGo:
     """Sky Go Class"""
@@ -23,12 +31,14 @@ class SkyGo:
     baseUrl = "https://www.skygo.sky.de"
 
 
-    def __init__(self, cookiePath):
+    def __init__(self):
         self.sessionId = ''
         self.cookiePath = cookiePath
+        self.licence_url = licence_url
 
         # Create session with old cookies
         self.session = requests.session()
+        self.session.headers.setdefault('User-Agent','Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.75 Safari/537.36')
 
         if os.path.isfile(cookiePath):
             with open(cookiePath) as f:
@@ -127,10 +137,9 @@ class SkyGo:
         tree = ET.ElementTree(ET.fromstring(r.text.encode('utf-8')))
         root = tree.getroot()
         manifestUrl = root.find('channel/item/media:content', ns).attrib['url']
-        apixId = root.find('channel/item/skyde:apixEventId',ns).text
-        duration = root.find('channel/item/skyde:duration', ns).text
+        apixId = root.find('channel/item/skyde:apixEventId', ns).text
 
-        return {'manifestUrl': manifestUrl, 'apixId': apixId, 'duration': duration}
+        return {'manifestUrl': manifestUrl, 'apixId': apixId, 'duration': 0}
 
     def getCurrentEvent(self, epg_channel_id):
         # Save date for fure use
@@ -187,5 +196,11 @@ class SkyGo:
     def getSeriesInfo(self, series_id):
         r = requests.get(self.baseUrl + "/sg/multiplatform/web/json/details/series/"+ series_id +"_global.json")
         return r.json()['serieRecap']['serie']
+
+    def get_init_data(self, session_id, apix_id):
+        init_data = 'kid={UUID}&sessionId='+session_id+'&apixId='+apix_id+'&platformId=WEB&product=BW&channelId='
+        init_data = struct.pack('1B', *[30])+init_data
+        init_data = base64.urlsafe_b64encode(init_data)
+        return init_data
 
 
