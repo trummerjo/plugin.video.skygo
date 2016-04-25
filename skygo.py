@@ -22,6 +22,7 @@ licence_url = 'https://wvguard.sky.de/WidevineLicenser/WidevineLicenser|User-Age
 
 addon = xbmcaddon.Addon()
 autoKillSession = addon.getSetting('autoKillSession')
+print autoKillSession
 datapath = xbmc.translatePath(addon.getAddonInfo('profile'))
 cookiePath = datapath + 'COOKIES'
 
@@ -77,7 +78,6 @@ class SkyGo:
     def killSessions(self):
         # Kill other sessions
         r = self.session.get('https://www.skygo.sky.de/SILK/services/public/session/kill/web?version=12354&platform=web&product=SG')
-        print r.text
 
     def sendLogin(self, username, password):
         # Try to login
@@ -97,11 +97,14 @@ class SkyGo:
 
             # if login is correct but other session is active ask user if other session should be killed
             if response['resultCode'] == 'T_206':
-                killSession = autoKillSession
-                if not killSession:
-                    killSession = xbmcgui.Dialog().yesno('Sie sind bereits eingeloggt!','Sie sind bereits auf einem anderen Geraet oder mit einem anderen Browser eingeloggt. Wollen Sie die bestehende Sitzung beenden und sich jetzt hier neu anmelden?')
+                kill_session = False
+                if autoKillSession == 'true':
+                    kill_session = True
 
-                if killSession:
+                if not kill_session:
+                    kill_session = xbmcgui.Dialog().yesno('Sie sind bereits eingeloggt!','Sie sind bereits auf einem anderen Geraet oder mit einem anderen Browser eingeloggt. Wollen Sie die bestehende Sitzung beenden und sich jetzt hier neu anmelden?')
+
+                if kill_session:
                     # Kill all Sessions (including ours)
                     self.killSessions()
                     # Session killed so login again
