@@ -30,6 +30,7 @@ class SkyGo:
     """Sky Go Class"""
 
     baseUrl = "https://www.skygo.sky.de"
+    entitlements = []
 
 
     def __init__(self):
@@ -64,6 +65,7 @@ class SkyGo:
 
         if response['resultMessage'] == 'OK':
             self.sessionId = response['skygoSessionId']
+            self.entitlements = response['entitlements']
             print "User still logged in"
             return True
         else:
@@ -139,10 +141,12 @@ class SkyGo:
         r = requests.get(url)
         tree = ET.ElementTree(ET.fromstring(r.text.encode('utf-8')))
         root = tree.getroot()
-        manifestUrl = root.find('channel/item/media:content', ns).attrib['url']
-        apixId = root.find('channel/item/skyde:apixEventId', ns).text
+        manifest_url = root.find('channel/item/media:content', ns).attrib['url']
+        apix_id = root.find('channel/item/skyde:apixEventId', ns).text
+        package_code = root.find('channel/item/skyde:packageCode', ns).text
 
-        return {'manifestUrl': manifestUrl, 'apixId': apixId, 'duration': 0}
+
+        return {'manifestUrl': manifest_url, 'apixId': apix_id, 'duration': 0, 'package_code': package_code}
 
     def getCurrentEvent(self, epg_channel_id):
         # Save date for fure use
@@ -176,6 +180,8 @@ class SkyGo:
 
         return self.getPlayInfo(url=playinfo_url)
 
+    def may_play(self, entitlement):
+        return entitlement in self.entitlements
 
     def getMostWatched(self):
         r = requests.get("http://www.skygo.sky.de/sg/multiplatform/web/json/automatic_listing/film/mostwatched/32.json")
