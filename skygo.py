@@ -51,7 +51,10 @@ class SkyGo:
 
 
     def getLandingPage(self):
-        r = requests.get(self.baseUrl + '/sg/multiplatform/web/json/landingpage/1.json')
+        return self.getPage(self.baseUrl + '/sg/multiplatform/web/json/landingpage/1.json')
+
+    def getPage(self, url):
+        r = requests.get(url)
         return r.json()['listing']
 
     def isLoggedIn(self):
