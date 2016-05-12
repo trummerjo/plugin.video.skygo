@@ -14,6 +14,27 @@ password = addon.getSetting('password')
 skygo = SkyGo()
 
 
+
+def generateLPageDir(url):
+    skygo = SkyGo()
+    page = skygo.getPage(url)
+
+    keys = ['box_listing', 'listing']
+
+    for key in keys:
+        if key in page:
+            for item in page[key]['item']:
+                url = common.build_url({'action': 'listing', 'path': item['path']})
+
+                # Skip Sport stuff for now
+                if item['title'] == 'Sport':
+                    continue
+
+                li = xbmcgui.ListItem(item['title'])
+                xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
+                                            listitem=li, isFolder=True)
+
+
 def list_dir(path):
     assets = skygo.getListing(path)
     xbmcplugin.setContent(addon_handle, 'movies')
@@ -75,8 +96,11 @@ def list_dir(path):
                 'title': asset['title'],
                 'mediatype': 'movie',
                 'originaltitle': asset['original_title'],
-                'plot': asset['synopsis'],
+                #'plot': asset['synopsis'],
             }
+            if 'synopsis' in asset:
+                info['plot'] = asset['synopsis']
+
             label = asset['title']
 
         li = xbmcgui.ListItem(label=label)

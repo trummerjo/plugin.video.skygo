@@ -5,6 +5,8 @@ import urlparse
 import resources.lib.liveTv as liveTv
 import resources.lib.common as common
 import resources.lib.vod as vod
+from resources.lib import movies
+from resources.lib import series
 from skygo import SkyGo
 
 
@@ -40,40 +42,19 @@ def landing():
     xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=True)
 
 
-def generateLPageDir(url):
-    skygo = SkyGo()
-    page = skygo.getPage(url)
-
-    keys = ['box_listing', 'listing']
-
-    for key in keys:
-        if key in page:
-            for item in page[key]['item']:
-                url = common.build_url({'action': 'listing', 'path': item['path']})
-
-                # Skip Sport stuff for now
-                if item['title'] == 'Sport':
-                    continue
-
-                li = xbmcgui.ListItem(item['title'])
-                xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
-                                            listitem=li, isFolder=True)
-    xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=True)
-
-
 def rootDir():
 
-    url = common.build_url({'action': 'landing'})
-    li = xbmcgui.ListItem('Landing Page')
+    url = common.build_url({'action': 'listPage', 'url': 'http://www.skygo.sky.de/sg/multiplatform/web/json/landingpage/7.json'})
+    li = xbmcgui.ListItem('Sport')
     xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
                                 listitem=li, isFolder=True)
 
-    url = common.build_url({'action': 'listPage', 'url': 'http://www.skygo.sky.de/sg/multiplatform/web/json/landingpage/6.json'})
+    url = common.build_url({'action': 'listPage', 'page': 'movies'})
     li = xbmcgui.ListItem('Filme')
     xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
                                 listitem=li, isFolder=True)
 
-    url = common.build_url({'action': 'listPage', 'url': 'http://www.skygo.sky.de/sg/multiplatform/web/json/landingpage/5.json'})
+    url = common.build_url({'action': 'listPage', 'page': 'series'})
     li = xbmcgui.ListItem('Serien')
     xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
                                 listitem=li, isFolder=True)
@@ -104,19 +85,25 @@ def rootDir():
                                 listitem=li, isFolder=True)
 
 
-
-
     url = common.build_url({'action': 'listLiveTvChannels'})
     li = xbmcgui.ListItem('Live TV')
     xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
                                 listitem=li, isFolder=True)
 
 
+    url = common.build_url({'action': 'landing'})
+    li = xbmcgui.ListItem('Landing Page')
+    xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
+                                listitem=li, isFolder=True)
+
 
     xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=False)
 
 # Router for all plugin actions
 if params:
+
+    print params
+
     if params['action'] == 'playVod':
         vod.play_vod(params['vod_id'])
 
@@ -126,8 +113,27 @@ if params:
     elif params['action'] == 'landing':
         landing()
 
+    elif params['action'] == 'moviesList':
+        if 'letter' in params:
+            movies.lexic(params['letter'])
+        else:
+            movies.all_by_lexic()
+
+    elif params['action'] == 'seriesList':
+        if 'letter' in params:
+            series.lexic(params['letter'])
+        else:
+            series.all_by_lexic()
+
     elif params['action'] == 'listPage':
-        generateLPageDir(params['url'])
+        if 'page' in params:
+            if params['page'] == 'movies':
+                movies.overview_list()
+            elif params['page'] == 'series':
+                series.overview_list()
+        else:
+            vod.generateLPageDir(params['url'])
+            xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=True)
 
     elif params['action'] == 'playLiveTvChannel':
         liveTv.play_live_tv(params['epg_channel_id'])
