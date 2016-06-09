@@ -86,7 +86,11 @@ class SkyGo:
 
     def sendLogin(self, username, password):
         # Try to login
-        r = self.session.get("https://www.skygo.sky.de/SILK/services/public/session/login?version=1354&platform=web&product=SG&email="+username+"&password="+password+"&remMe=true")
+        login = "email="+username
+        if not re.match(r"^[A-Za-z0-9\.\+_-]+@[A-Za-z0-9\._-]+\.[a-zA-Z]*$", username):
+        	login = "customerCode="+username
+        
+        r = self.session.get("https://www.skygo.sky.de/SILK/services/public/session/login?version=1354&platform=web&product=SG&"+login+"&password="+password+"&remMe=true")
         #Parse jsonp
         response = r.text[3:-1]
         response = json.loads(response)
