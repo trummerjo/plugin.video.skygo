@@ -61,30 +61,28 @@ def list_dir(path):
         info = {}
         label = 'label'
         if asset['type'] == 'Episode':
-            if 'season_nr' not in asset:
-                asset['season_nr'] = '??'
-            label = asset['serie_title'] + ' S'+str(asset['season_nr'])+'E'+str(asset['episode_nr'])
+            label = asset.get('serie_title', '') + ' S'+str(asset.get('season_nr', ''))+'E'+str(asset.get('episode_nr', ''))
             info = {
-                'genre': asset['category']['main']['content'],
-                'year': asset['year_of_production'],
+                'genre': asset.get('category', {}).get('main', {}).get('content', ''),
+                'year': asset.get('year_of_production', ''),
                 'mpaa': asset['parental_rating']['value'],
-                'title': asset['serie_title'] + ' E'+str(asset['episode_nr']),
+                'title': asset.get('serie_title', '') + ' E'+str( asset.get('episode_nr', '')),
                 'mediatype': 'video',
-                'originaltitle': asset['original_title'],
-                'plot': asset['synopsis'],
-                'episode': asset['episode_nr'],
-                'season': asset['season_nr']
+                'originaltitle': asset.get('original_title', ''),
+                'plot': asset.get('synopsis', ''),
+                'episode': asset.get('episode_nr', ''),
+                'season': asset.get('season_nr', '')
             }
 
         elif asset['type'] == 'Movie' or asset['type'] == 'Film':
             info = {
-                'genre': asset['category']['main']['content'],
-                'year': asset['year_of_production'],
+                'genre': asset.get('category', {}).get('main', {}).get('content', ''),
+                'year': asset.get('year_of_production', ''),
                 'mpaa': asset['parental_rating']['value'],
-                'title': asset['title'],
+                'title': asset.get('title', ''),
                 'mediatype': 'movie',
-                'originaltitle': asset['original_title'],
-                'plot': asset['synopsis'],
+                'originaltitle': asset.get('original_title', ''),
+                'plot': asset.get('synopsis', ''),
             }
             label = asset['title']
 
@@ -92,16 +90,14 @@ def list_dir(path):
             url = common.build_url({'action': 'listSeries', 'series_id': asset['id']})
 
             info = {
-                'genre': asset['category']['main']['content'],
-                'title': asset['title'],
+                'genre': asset.get('category', {}).get('main', {}).get('content', ''),
+                'title': asset.get('title', ''),
                 'mediatype': 'movie',
-                'originaltitle': asset['original_title'],
-                #'plot': asset['synopsis'],
+                'originaltitle': asset.get('original_title', ''),
+                'plot': asset.get('synopsis', '')
             }
-            if 'synopsis' in asset:
-                info['plot'] = asset['synopsis']
 
-            label = asset['title']
+            label = asset.get('title', '')
 
         li = xbmcgui.ListItem(label=label)
         li.setArt({'thumb': cover, 'poster': cover, 'fanart': heroImg})
@@ -155,7 +151,7 @@ def list_series(series_id):
             info = {
                 'genre': episode['category']['main']['content'],
                 'mpaa': episode['parental_rating']['value'],
-                'title': episode['serie_title'] + ' E'+str(episode['episode_nr']),
+                'title': episode.get('serie_title', '') + ' E'+str(episode.get('episode_nr', '')),
                 'mediatype': 'movie',
             }
             li = xbmcgui.ListItem(label=label)
