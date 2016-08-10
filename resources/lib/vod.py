@@ -168,7 +168,7 @@ def list_series(series_id):
 
 
 def play_vod(vod_id):
-    login = skygo.login(username, password)
+    login = skygo.login()
 
     if login:
         session_id = skygo.sessionId

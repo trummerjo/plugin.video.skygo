@@ -22,6 +22,8 @@ licence_url = 'https://wvguard.sky.de/WidevineLicenser/WidevineLicenser|User-Age
 
 addon = xbmcaddon.Addon()
 autoKillSession = addon.getSetting('autoKillSession')
+username = addon.getSetting('email')
+password = addon.getSetting('password')
 print autoKillSession
 datapath = xbmc.translatePath(addon.getAddonInfo('profile'))
 cookiePath = datapath + 'COOKIES'
@@ -96,7 +98,7 @@ class SkyGo:
         response = json.loads(response)
         return response
 
-    def login(self, username, password):
+    def login(self):
 
         # If already logged in and active session everything is fine
         if not self.isLoggedIn():
@@ -189,6 +191,11 @@ class SkyGo:
 
     def may_play(self, entitlement):
         return entitlement in self.entitlements
+
+    def getAssetDetails(self, asset_id):
+        url = 'http://www.skygo.sky.de/sg/multiplatform/web/json/details/asset/' + str(asset_id) + '.json'       
+        r = self.session.get(url)
+        return r.json()['asset']
 
     def getMostWatched(self):
         r = requests.get("http://www.skygo.sky.de/sg/multiplatform/web/json/automatic_listing/film/mostwatched/32.json")

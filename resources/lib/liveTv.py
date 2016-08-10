@@ -45,7 +45,7 @@ def play_live_tv(epg_channel_id):
         manifest_url = playInfo['manifestUrl']
 
         # Login to get session
-        login = skygo.login(username, password)
+        login = skygo.login()
         session_id = skygo.sessionId
 
         # create init data for licence acquiring
