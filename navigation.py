@@ -72,6 +72,8 @@ def getHeroImage(data):
     return ''
 
 def getPoster(data):
+    if 'logo' in data:
+        return skygo.baseUrl + data['logo']
     if 'picture' in data:
         return skygo.baseUrl + data['picture']
     if 'dvd_cover' in data:
@@ -100,6 +102,23 @@ def search():
 #        listitems.append({'type': 'path', 'label': 'Mehr...', 'url': url})
 
     listAssets(listitems)
+
+def listLiveChannels():
+    listitems = []
+    channelid_list = []
+    url = 'http://www.skygo.sky.de/epgd/sg/ipad/excerpt/'
+    r = requests.get(url)
+    data = r.json()
+    for tab in data:
+        for event in tab['eventList']:
+            if event['channel']['msMediaUrl'].startswith('http://'):
+                url = common.build_url({'action': 'playLive', 'event_id': event['event']['id'], 'manifest': event['channel']['msMediaUrl']})                
+                if not event['channel']['id'] in channelid_list:
+                    listitems.append({'type': 'live', 'label': event['channel']['name'], 'url': url, 'data': event})
+                    channelid_list.append(event['channel']['id'])
+
+    listAssets(listitems)
+    
 
 def listEpisodesFromSeason(series_id, season_id):
     url = skygo.baseUrl + '/sg/multiplatform/web/json/details/series/' + str(series_id) + '_global.json'
@@ -239,6 +258,9 @@ def getInfoLabel(asset_type, data):
         info['title'] = data['item_title']
         info['plot'] = data.get('teaser_long', '')
         info['genre'] = data.get('item_category_name', '')
+    if asset_type == 'live':
+        info['title'] = data['channel']['name']
+        info['plot'] = data['event'].get('subtitle', '')
     
     return info
 
@@ -246,7 +268,7 @@ def listAssets(asset_list):
     for item in asset_list:
         isPlayable = False
         li = xbmcgui.ListItem(label=item['label'])
-        if item['type'] in ['Film', 'Episode', 'Sport', 'Clip', 'Series']:
+        if item['type'] in ['Film', 'Episode', 'Sport', 'Clip', 'Series', 'live']:
             isPlayable = True
             info = getInfoLabel(item['type'], item['data'])
             li.setInfo('video', info)
@@ -261,9 +283,12 @@ def listAssets(asset_list):
             xbmcplugin.setContent(addon_handle, 'episodes')
         elif item['type'] in ['Sport', 'Clip']:
             xbmcplugin.setContent(addon_handle, 'files')
-            li.setArt({'thumb': skygo.baseUrl + getHeroImage(item['data'])})
+            li.setArt({'thumb': getHeroImage(item['data'])})
         elif item['type'] == 'searchresult':
             xbmcplugin.setContent(addon_handle, 'files')
+        elif item['type'] == 'live':
+            xbmcplugin.setContent(addon_handle, 'movies')
+            li.setArt({'poster': getPoster(item['data']['channel']), 'fanart': skygo.baseUrl + item['data']['event']['image']})
             
         li.setProperty('IsPlayable', str(isPlayable).lower())
         xbmcplugin.addDirectoryItem(handle=addon_handle, url=item['url'],
@@ -323,5 +348,4 @@ def listPage(page_id):
 
     if len(items) > 0:
         xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=True)         
-
 

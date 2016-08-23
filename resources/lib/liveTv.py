@@ -9,8 +9,6 @@ from skygo import SkyGo
 
 addon_handle = int(sys.argv[1])
 addon = xbmcaddon.Addon()
-username = addon.getSetting('email')
-password = addon.getSetting('password')
 skygo = SkyGo()
 
 
@@ -30,6 +28,28 @@ def generate_channel_list():
                                     listitem=li, isFolder=False)
 
     xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=False)
+
+def playLiveTv(manifest_url):
+    #hardcoded apixId for live content
+    apix_id = 'livechannel_127'
+
+    # Login to get session
+    login = skygo.login()
+    session_id = skygo.sessionId
+
+    # create init data for licence acquiring
+    init_data = skygo.get_init_data(session_id, apix_id)
+
+    # Create list item with inputstream addon
+    li = xbmcgui.ListItem(path=manifest_url)
+    info = {'mediatype': 'movie'}
+    li.setInfo('video', info)
+    li.setProperty('inputstream.smoothstream.license_type', 'com.widevine.alpha')
+    li.setProperty('inputstream.smoothstream.license_key', skygo.licence_url)
+    li.setProperty('inputstream.smoothstream.license_data', init_data)
+    li.setProperty('inputstreamaddon', 'inputstream.smoothstream')
+
+    xbmcplugin.setResolvedUrl(addon_handle, True, listitem=li)    
 
 
 def play_live_tv(epg_channel_id):

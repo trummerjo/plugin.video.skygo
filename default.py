@@ -102,7 +102,7 @@ def rootDir():
                                 listitem=li, isFolder=True)
 
 
-    xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=False)
+    xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=False)  
 
 # Router for all plugin actions
 if params:
@@ -113,9 +113,12 @@ if params:
         vod.play_vod(params['vod_id'])
     elif params['action'] == 'playClip':
         clips.playClip(params['id'])
+    elif params['action'] == 'playLive':
+        liveTv.playLiveTv(params['manifest'])
 
     elif params['action'] == 'listLiveTvChannels':
-        liveTv.generate_channel_list()
+#        liveTv.generate_channel_list()
+        nav.listLiveChannels()
     elif params['action'] == 'watchlist':
         if 'list' in params:
             page = 0
