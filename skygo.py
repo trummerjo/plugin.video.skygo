@@ -52,13 +52,6 @@ class SkyGo:
         return
 
 
-    def getLandingPage(self):
-        return self.getPage(self.baseUrl + '/sg/multiplatform/web/json/landingpage/1.json')
-
-    def getPage(self, url):
-        r = requests.get(url)
-        return r.json()['listing']
-
     def isLoggedIn(self):
         """Check if User is still logged in with the old cookies"""
         r = self.session.get('https://www.skygo.sky.de/SILK/services/public/user/getdata?product=SG&platform=web&version=12354')
@@ -79,8 +72,6 @@ class SkyGo:
                 print 'Session invalid - Customer Code not found in SilkCache'
                 return False
         return False
-
-
 
     def killSessions(self):
         # Kill other sessions
@@ -197,28 +188,10 @@ class SkyGo:
         r = self.session.get(url)
         return r.json()['asset']
 
-    def getMostWatched(self):
-        r = requests.get("http://www.skygo.sky.de/sg/multiplatform/web/json/automatic_listing/film/mostwatched/32.json")
-        mostWatchedJson = r.json()
-        return mostWatchedJson['listing']['asset_listing']['asset']
-
-    def getListing(self, path):
-        r = requests.get(self.baseUrl + path)
-        return r.json()['listing']['asset_listing']['asset']
-
-
-    def getChannels(self):
-        r = requests.get("http://www.skygo.sky.de/epgd/sg/web/channelList")
-        channels = r.json()['channelList']
-        # Filter for channels with mediaurl
-        channels = [c for c in channels if c['mediaurl'] != '']
-
-        return channels
-
-
-    def getSeriesInfo(self, series_id):
-        r = requests.get(self.baseUrl + "/sg/multiplatform/web/json/details/series/"+ series_id +"_global.json")
-        return r.json()['serieRecap']['serie']
+    def getClipDetails(self, clip_id):
+        url = 'http://www.skygo.sky.de/sg/multiplatform/web/json/details/clip/' + str(clip_id) + '.json'       
+        r = self.session.get(url)
+        return r.json()['detail']
 
     def get_init_data(self, session_id, apix_id):
         init_data = 'kid={UUID}&sessionId='+session_id+'&apixId='+apix_id+'&platformId=WEB&product=BW&channelId='

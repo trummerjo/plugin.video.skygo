@@ -216,11 +216,6 @@ def parseListing(page, path):
                         if not 'asset_type' in item and 'path' in item:
                             url = common.build_url({'action': 'listPage', 'path': item['path']})
                             listitems.append({'type': 'listPage', 'label': item['title'], 'url': url})
-#                        elif 'asset_type' in item:
-#                            if item['asset_type'].lower() in ['film', 'clip', 'episode', 'sport']:
-#                                if item['asset_type'].lower() == 'clip':
-#                                    url = common.build_url({'action': 'playVod', 'vod_id': item['id']})
-#                                    listitems.append({'type': 'asset', 'label': '', 'url': url, 'data': item})
                 else:
                     listPath(page['listing']['listing']['item']['path'])
 

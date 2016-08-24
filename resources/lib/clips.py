@@ -34,19 +34,24 @@ def buildClipUrl(url, token):
 
 def playClip(clip_id):
     if skygo.login():
-        url = 'http://www.skygo.sky.de/sg/multiplatform/ipad/json/details/clip/' + clip_id + '.json'
-        r = skygo.session.get(url)
-        clip_info = r.json()['detail']
+        clip_info = skygo.getClipDetails(clip_id)
         token = getClipToken(clip_info['content_subscription'])
         manifest = buildClipUrl(clip_info['videoUrlMSSProtected'], token)
 
-        li = xbmcgui.ListItem(path=manifest)
-        info = {'mediatype': 'movie'}
-        li.setInfo('video', info) 
-        # Force smoothsteam addon
-        li.setProperty('inputstream.smoothstream.license_type', 'com.widevine.alpha')
-        li.setProperty('inputstreamaddon', 'inputstream.smoothstream')
+        if skygo.may_play(clip_info['package_code']):
+            li = xbmcgui.ListItem(path=manifest)
+            info = {'mediatype': 'movie'}
+            li.setInfo('video', info) 
+            # Force smoothsteam addon
+            li.setProperty('inputstream.smoothstream.license_type', 'com.widevine.alpha')
+            li.setProperty('inputstreamaddon', 'inputstream.smoothstream')
 
-        # Start Playing
-        xbmcplugin.setResolvedUrl(addon_handle, True, listitem=li)
+            # Start Playing
+            xbmcplugin.setResolvedUrl(addon_handle, True, listitem=li)
+        else:
+            xbmcgui.Dialog().notification('SkyGo Fehler', 'Keine Berechtigung zum Abspielen dieses Eintrages', xbmcgui.NOTIFICATION_ERROR, 2000, True)
+
+    else:
+        xbmcgui.Dialog().notification('SkyGo Fehler', 'Fehler bei Login', xbmcgui.NOTIFICATION_ERROR, 2000, True)
+        print 'Fehler beim Einloggen'
 
