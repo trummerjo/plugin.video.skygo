@@ -1,6 +1,6 @@
 import sys
-import xbmcgui
-import xbmcplugin
+import os
+import xbmc, xbmcgui, xbmcplugin, xbmcaddon
 import requests
 import json
 import resources.lib.liveTv as liveTv
@@ -12,6 +12,7 @@ import xml.etree.ElementTree as ET
 
 addon_handle = int(sys.argv[1])
 plugin_base_url = sys.argv[0]
+addon = xbmcaddon.Addon()
 skygo = SkyGo()
 
 #Blacklist: diese nav_ids nicht anzeigen
@@ -21,12 +22,31 @@ nav_blacklist = [34, 32, 27]
 #Sport: Wiederholungen
 nav_force = [35]
 
+def reloadNavigation():
+    w = xbmcgui.Window(10000)
+    state = w.getProperty('skygo.state')
+    if state == '1':
+        return False
+    else:
+        w.setProperty('skygo.state', '1')
+
+    return True
+    
 def getNav():
-    r = requests.get('http://www.skygo.sky.de/sg/multiplatform/ipad/json/navigation.xml')
-    nav = ET.fromstring(r.text.encode('utf-8'))
-
-    return nav
-
+    nav_file = xbmc.translatePath(addon.getAddonInfo('profile')) + 'navigation.xml'
+    #use stored version of navigation.xml but reload it on first run
+    if os.path.isfile(nav_file) and not reloadNavigation():
+        nav = ET.parse(nav_file)
+        return nav.getroot()
+    else:
+        #update navigation.xml on first run
+        r = requests.get('http://www.skygo.sky.de/sg/multiplatform/ipad/json/navigation.xml')
+        nav = ET.fromstring(r.text.encode('utf-8'))
+        with open(nav_file, 'w+') as f:
+            f.write(r.text.encode('utf-8'))
+            f.close()
+        return nav
+     
 def liveChannelsDir():
     url = common.build_url({'action': 'listLiveTvChannels'})
     li = xbmcgui.ListItem('Livesender')
@@ -40,6 +60,7 @@ def watchlistDir():
                                 listitem=li, isFolder=True)
 
 def rootDir():
+    print sys.argv
     nav = getNav()
     #Livesender
     liveChannelsDir()
@@ -59,7 +80,7 @@ def rootDir():
     li = xbmcgui.ListItem('Suche')
     xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
                                 listitem=li, isFolder=True)     
-    xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=False)
+    xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=True)
     
 def getHeroImage(data):
     if 'main_picture' in data:
@@ -125,10 +146,11 @@ def listEpisodesFromSeason(series_id, season_id):
     r = requests.get(url)
     data = r.json()['serieRecap']['serie']
     xbmcplugin.setContent(addon_handle, 'episodes')
+    print data
     for season in data['seasons']['season']:
         if str(season['id']) == str(season_id):
             for episode in season['episodes']['episode']:
-                url = common.build_url({'action': 'play_vod', 'vod_id': episode['id']})
+                url = common.build_url({'action': 'playVod', 'vod_id': episode['id']})
                 li = xbmcgui.ListItem()
                 li.setProperty('IsPlayable', 'true')
                 info = getInfoLabel('Episode', episode)
@@ -263,6 +285,7 @@ def listAssets(asset_list):
     for item in asset_list:
         isPlayable = False
         li = xbmcgui.ListItem(label=item['label'])
+        print item
         if item['type'] in ['Film', 'Episode', 'Sport', 'Clip', 'Series', 'live']:
             isPlayable = True
             info = getInfoLabel(item['type'], item['data'])
@@ -308,12 +331,14 @@ def listPath(path):
     listitems = parseListing(page, path)
     listAssets(listitems)       
 
-def getPageItems(node):
+def getPageItems(nodes, page_id):
     listitems = []
-    for item in node:
-        if (item.attrib['hide'] == 'true' or int(item.attrib['id']) in nav_blacklist) and not int(item.attrib['id']) in nav_force:
-            continue
-        listitems.append(item)
+    for section in nodes.iter('section'):
+        if section.attrib['id'] == page_id:
+            for item in section:
+                if (item.attrib['hide'] == 'true' or int(item.attrib['id']) in nav_blacklist) and not int(item.attrib['id']) in nav_force:
+                    continue
+                listitems.append(item)
 
     return listitems
 
@@ -325,8 +350,7 @@ def getParentNode(nodes, page_id):
 
 def listPage(page_id):
     nav = getNav()
-    node = getParentNode(nav, page_id)
-    items = getPageItems(node)
+    items = getPageItems(nav, page_id)
     if len(items) == 1:
         if 'path' in items[0].attrib:
             listPath(items[0].attrib['path'])
@@ -343,4 +367,5 @@ def listPage(page_id):
 
     if len(items) > 0:
         xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=True)         
+
 
