@@ -16,11 +16,11 @@ addon = xbmcaddon.Addon()
 skygo = SkyGo()
 
 #Blacklist: diese nav_ids nicht anzeigen
-#Sport: Datencenter, NewsSection, Aktuell
-nav_blacklist = [34, 32, 27]
+#Sport: Datencenter, NewsSection, Aktuell, Snap
+nav_blacklist = [34, 32, 27, 15]
 #Force: anzeige dieser nav_ids erzwingen
 #Sport: Wiederholungen
-nav_force = [35]
+nav_force = [35, 36, 37, 161]
 
 def reloadNavigation():
     w = xbmcgui.Window(10000)
@@ -336,7 +336,8 @@ def getPageItems(nodes, page_id):
     for section in nodes.iter('section'):
         if section.attrib['id'] == page_id:
             for item in section:
-                if (item.attrib['hide'] == 'true' or int(item.attrib['id']) in nav_blacklist) and not int(item.attrib['id']) in nav_force:
+                #if (item.attrib['hide'] == 'true' or int(item.attrib['id']) in nav_blacklist) and not int(item.attrib['id']) in nav_force:
+                if int(item.attrib['id']) in nav_blacklist:
                     continue
                 listitems.append(item)
 
