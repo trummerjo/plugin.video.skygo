@@ -1,5 +1,7 @@
+# coding: utf8
 import sys
 import json
+import xbmc
 import xbmcaddon
 import xbmcgui
 import xbmcplugin
@@ -44,12 +46,23 @@ def listWatchlist(asset_type, page=0):
         url = common.build_url({'action': 'watchlist', 'list': asset_type, 'page': page+1})    
         listitems.append({'type': 'path', 'label': 'Mehr...', 'url': url})
 
-    nav.listAssets(listitems)
-
-def addToWatchlist(asset_id):
-    url = base_url + 'add?assetId=' + asset_id
-    #todo    
+    nav.listAssets(listitems, isWatchlist=True)
+    
+def addToWatchlist(asset_id, asset_type):
+    skygo.login()
+    url = base_url + 'add?assetId=' + asset_id + '&type=' + asset_type + '&version=12354&platform=web&product=SG&catalog=sg'
+    r = skygo.session.get(url)
+    res = json.loads(r.text[3:len(r.text)-1])
+    if res['resultMessage'] == 'OK':
+        xbmcgui.Dialog().notification('SkyGo ', asset_type + ' zur Merkliste hinzugefügt', xbmcgui.NOTIFICATION_INFO, 2000, True)
+    else:
+        xbmcgui.Dialog().notification('SkyGo ', asset_type + ' konnte nicht zur Merkliste hinzugefügt werden', xbmcgui.NOTIFICATION_ERROR, 2000, True)
 
 def deleteFromWatchlist(asset_id):
-    url = base_url + 'add?assetId=' + asset_id
-    #todo
+    url = base_url + 'delete?assetId=' + asset_id + '&version=12354&platform=web&product=SG&catalog=sg'
+    r = skygo.session.get(url)
+    res = json.loads(r.text[3:len(r.text)-1])
+    if res['resultMessage'] == 'OK':
+        xbmc.executebuiltin('Container.Refresh')
+    else:
+        xbmcgui.Dialog().notification('SkyGo', 'Fehler: Merkliste', xbmcgui.NOTIFICATION_ERROR, 2000, True)

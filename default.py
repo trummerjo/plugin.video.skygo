@@ -30,6 +30,7 @@ if params:
 
     elif params['action'] == 'listLiveTvChannels':
         nav.listLiveChannels()
+
     elif params['action'] == 'watchlist':
         if 'list' in params:
             page = 0
@@ -38,6 +39,11 @@ if params:
             watchlist.listWatchlist(params['list'], page=page)
         else:
             watchlist.rootDir()
+    elif params['action'] == 'watchlistAdd':
+        watchlist.addToWatchlist(params['id'], params['assetType'])
+    elif params['action'] == 'watchlistDel':
+        watchlist.deleteFromWatchlist(params['id'])
+
     elif params['action'] == 'search':
         nav.search()
 
