@@ -3,6 +3,7 @@ import sys
 import os
 import xbmc, xbmcgui, xbmcplugin, xbmcaddon
 import requests
+import urllib2
 import json
 import resources.lib.liveTv as liveTv
 import resources.lib.common as common
@@ -22,31 +23,11 @@ nav_blacklist = [34, 32, 27, 15, 33]
 #Force: anzeige dieser nav_ids erzwingen
 #Sport: Wiederholungen
 nav_force = [35, 36, 37, 161]
-
-def reloadNavigation():
-    w = xbmcgui.Window(10000)
-    state = w.getProperty('skygo.state')
-    if state == '1':
-        return False
-    else:
-        w.setProperty('skygo.state', '1')
-
-    return True
-    
+ 
 def getNav():
-    nav_file = xbmc.translatePath(addon.getAddonInfo('profile')) + 'navigation.xml'
-    #use stored version of navigation.xml but reload it on first run
-    if os.path.isfile(nav_file) and not reloadNavigation():
-        nav = ET.parse(nav_file)
-        return nav.getroot()
-    else:
-        #update navigation.xml on first run
-        r = requests.get('http://www.skygo.sky.de/sg/multiplatform/ipad/json/navigation.xml')
-        nav = ET.fromstring(r.text.encode('utf-8'))
-        with open(nav_file, 'w+') as f:
-            f.write(r.text.encode('utf-8'))
-            f.close()
-        return nav
+    feed = urllib2.urlopen('http://www.skygo.sky.de/sg/multiplatform/ipad/json/navigation.xml')
+    nav = ET.parse(feed)
+    return nav.getroot()
      
 def liveChannelsDir():
     url = common.build_url({'action': 'listLiveTvChannels'})
