@@ -8,7 +8,10 @@ from skygo import SkyGo
 import time
 import base64
 import urllib
-from Crypto.Cipher import AES
+#cryptopy
+from crypto.cipher import aes_cbc
+#pycrypto
+#from Crypto.Cipher import AES
 skygo = SkyGo()
 
 addon_handle = int(sys.argv[1])
@@ -27,9 +30,15 @@ def getClipToken(content):
     return json.loads(r.text[3:len(r.text)-1])
 
 def buildClipUrl(url, token):
-    dec = AES.new(aes_key[0].decode('hex'), AES.MODE_CBC, aes_key[1].decode('hex'))
-    path = dec.decrypt(base64.b64decode(token['tokenValue']))
-    query = token['tokenName'] + '=' + path[0:len(path)-7]    
+    #pyCrypto
+    #dec = AES.new(aes_key[0].decode('hex'), AES.MODE_CBC, aes_key[1].decode('hex'))
+    #path = dec.decrypt(base64.b64decode(token['tokenValue']))
+    #query = token['tokenName'] + '=' + path2[0:len(path2)-7]
+    #
+    #cryptopy
+    dec = aes_cbc.AES_CBC(key=aes_key[0].decode('hex'), keySize=16)
+    path = dec.decrypt(base64.b64decode(token['tokenValue']), iv=aes_key[1].decode('hex'))
+    query = token['tokenName'] + '=' + path
     return url + '?' + query
 
 def playClip(clip_id):
