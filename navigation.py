@@ -18,8 +18,8 @@ addon = xbmcaddon.Addon()
 skygo = SkyGo()
 
 #Blacklist: diese nav_ids nicht anzeigen
-#Sport: Datencenter, NewsSection, Aktuell, Snap, Mediathek
-nav_blacklist = [34, 32, 27, 15, 33]
+#Sport: Datencenter, NewsSection, Aktuell, Snap, Mediathek #33
+nav_blacklist = [34, 32, 27, 15]
 #Force: anzeige dieser nav_ids erzwingen
 #Sport: Wiederholungen
 nav_force = [35, 36, 37, 161]
@@ -272,10 +272,13 @@ def getInfoLabel(asset_type, data):
 def getWatchlistContextItem(item, delete=False):
     label = 'Zur Merkliste hinzufügen'
     action = 'watchlistAdd'
+    asset_type = item['type']
     if delete:
         label = 'Von Merkliste entfernen'
-        action = 'watchlistDel' 
-    url = common.build_url({'action': action, 'id': item['data']['id'], 'assetType': item['type']})
+        action = 'watchlistDel'
+    if asset_type == 'searchresult':
+        asset_type = item['data']['contentType']
+    url = common.build_url({'action': action, 'id': item['data']['id'], 'assetType': asset_type})
     return [(label, 'RunPlugin(' + url + ')')]
 
 def listAssets(asset_list, isWatchlist=False):
