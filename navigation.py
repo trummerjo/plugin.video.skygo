@@ -14,11 +14,14 @@ addon_handle = int(sys.argv[1])
 skygo = SkyGo()
 
 #Blacklist: diese nav_ids nicht anzeigen
-#Sport: Datencenter, NewsSection, Aktuell, Snap, Mediathek #33
+#Sport: Datencenter, NewsSection, Aktuell, Snap
 nav_blacklist = [34, 32, 27, 15]
 #Force: anzeige dieser nav_ids erzwingen
 #Sport: Wiederholungen
 nav_force = [35, 36, 37, 161]
+
+xbmcplugin.addSortMethod(int(sys.argv[1]), xbmcplugin.SORT_METHOD_NONE)
+xbmcplugin.addSortMethod(int(sys.argv[1]), xbmcplugin.SORT_METHOD_LABEL)
  
 def getNav():
     feed = urllib2.urlopen('http://www.skygo.sky.de/sg/multiplatform/ipad/json/navigation.xml')
