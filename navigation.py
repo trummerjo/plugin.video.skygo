@@ -1,20 +1,16 @@
 # coding: utf8
 import sys
 import os
-import xbmc, xbmcgui, xbmcplugin, xbmcaddon
+import xbmcgui, xbmcplugin
 import requests
 import urllib2
 import json
-import resources.lib.liveTv as liveTv
+import xml.etree.ElementTree as ET
 import resources.lib.common as common
-import resources.lib.vod as vod
 from skygo import SkyGo
 import watchlist
-import xml.etree.ElementTree as ET
 
 addon_handle = int(sys.argv[1])
-plugin_base_url = sys.argv[0]
-addon = xbmcaddon.Addon()
 skygo = SkyGo()
 
 #Blacklist: diese nav_ids nicht anzeigen
@@ -117,7 +113,7 @@ def listLiveChannels():
     for tab in data:
         for event in tab['eventList']:
             if event['channel']['msMediaUrl'].startswith('http://'):
-                url = common.build_url({'action': 'playLive', 'event_id': event['event']['id'], 'manifest': event['channel']['msMediaUrl']})                
+                url = common.build_url({'action': 'playLive', 'channel_id': event['channel']['id']})                
                 if not event['channel']['id'] in channelid_list:
                     listitems.append({'type': 'live', 'label': event['channel']['name'], 'url': url, 'data': event})
                     channelid_list.append(event['channel']['id'])
@@ -140,7 +136,7 @@ def listEpisodesFromSeason(series_id, season_id):
                 li.addContextMenuItems(getWatchlistContextItem({'type': 'Episode', 'data': episode}), replaceItems=False)
                 info = getInfoLabel('Episode', episode)
                 li.setInfo('video', info)
-                li.setLabel(info['title'])
+                li.setLabel('%02d. %s' % (info['episode'], info['title']))
                 li.setArt({'poster': skygo.baseUrl + season['path'], 
                            'fanart': getHeroImage(data),
                            'thumb': skygo.baseUrl + episode['webplayer_config']['assetThumbnail']})
@@ -156,8 +152,8 @@ def listSeasonsFromSeries(series_id):
     xbmcplugin.setContent(addon_handle, 'seasons')
     for season in data['seasons']['season']:
         url = common.build_url({'action': 'listSeason', 'id': season['id'], 'series_id': data['id']})
-        label = 'Staffel %02d' % (season['nr'])
-        li = xbmcgui.ListItem(label=season['webplayer_config']['assetTitle'])
+        label = '%s - Staffel %02d' % (data['title'], season['nr'])
+        li = xbmcgui.ListItem(label=label)
         li.setProperty('IsPlayable', 'false')
         li.setArt({'poster': skygo.baseUrl + season['path'], 
                    'fanart': getHeroImage(data)})
@@ -239,20 +235,24 @@ def getInfoLabel(asset_type, data):
     if not data.get('year_of_production', '') == '':
         info['year'] = data.get('year_of_production', '')
     info['plot'] = data.get('synopsis', '').replace('\n', '').strip()
+    print data
     if info['plot'] == '':
         info['plot'] = data.get('description', '').replace('\n', '').strip()
     info['duration'] = data.get('length', 0)*60
     if asset_type == 'Film':
+        info['mediatype'] = 'movie'
         info['genre'] = data.get('category', {}).get('main', {}).get('content', '')
     if asset_type == 'Series':
         info['year'] = data.get('year_of_production_start', '')
     if asset_type == 'Episode':
+        info['mediatype'] = 'episode'
         info['episode'] = data.get('episode_nr', '')           
         info['season'] = data.get('season_nr', '')
+        info['tvshowtitle'] = data.get('serie_title', '')
         if info['title'] == '':
             info['title'] = '%s - S%02dE%02d' % (data.get('serie_title', ''), data.get('season_nr', 0), data.get('episode_nr', 0))
-        else:
-            info['title'] = '%02d - %s' % (info['episode'], info['title'])
+#        else:
+#            info['title'] = '%02d - %s' % (info['episode'], info['title'])
     if asset_type == 'Sport':
         pass
     if asset_type == 'Clip':

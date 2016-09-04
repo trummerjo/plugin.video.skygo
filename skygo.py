@@ -1,3 +1,4 @@
+import sys
 import base64
 import struct
 
@@ -12,7 +13,7 @@ import xml.etree.ElementTree as ET
 
 import xbmc
 import xbmcgui
-import xbmcaddon
+import xbmcaddon, xbmcplugin
 
 LOGIN_STATUS = { 'SUCCESS': 'T_100',
                   'SESSION_INVALID': 'S_218',
@@ -21,6 +22,7 @@ LOGIN_STATUS = { 'SUCCESS': 'T_100',
 licence_url = 'https://wvguard.sky.de/WidevineLicenser/WidevineLicenser|User-Agent=Mozilla%2F5.0%20(X11%3B%20Linux%20x86_64)%20AppleWebKit%2F537.36%20(KHTML%2C%20like%20Gecko)%20Chrome%2F49.0.2623.87%20Safari%2F537.36&Referer=http%3A%2F%2Fwww.skygo.sky.de%2Ffilm%2Fscifi--fantasy%2Fjupiter-ascending%2Fasset%2Ffilmsection%2F144836.html&Content-Type=|R{SSM}|'
 
 addon = xbmcaddon.Addon()
+addon_handle = int(sys.argv[1])
 autoKillSession = addon.getSetting('autoKillSession')
 username = addon.getSetting('email')
 password = addon.getSetting('password')
@@ -83,7 +85,7 @@ class SkyGo:
         if not re.match(r"^[A-Za-z0-9\.\+_-]+@[A-Za-z0-9\._-]+\.[a-zA-Z]*$", username):
         	login = "customerCode="+username
         
-        r = self.session.get("https://www.skygo.sky.de/SILK/services/public/session/login?version=1354&platform=web&product=SG&"+login+"&password="+password+"&remMe=true")
+        r = self.session.get("https://www.skygo.sky.de/SILK/services/public/session/login?version=12354&platform=web&product=SG&"+login+"&password="+password+"&remMe=true")
         #Parse jsonp
         response = r.text[3:-1]
         response = json.loads(response)
@@ -199,4 +201,28 @@ class SkyGo:
         init_data = base64.urlsafe_b64encode(init_data)
         return init_data
 
+    def play(self, manifest_url, package_code, info_tag=None, apix_id=None):
+        if self.login():
+            if self.may_play(package_code):
+                init_data = None
+                # create init data for license acquiring
+                if apix_id:
+                    init_data = self.get_init_data(self.sessionId, apix_id)
+                # Prepare new ListItem to start playback
+                li = xbmcgui.ListItem(path=manifest_url)
+                if info_tag:
+                    li.setInfo('video', info_tag)
+                # Force smoothsteam addon
+                li.setProperty('inputstream.smoothstream.license_type', 'com.widevine.alpha')
+                if init_data:
+                    li.setProperty('inputstream.smoothstream.license_key', self.licence_url)
+                    li.setProperty('inputstream.smoothstream.license_data', init_data)
+                li.setProperty('inputstreamaddon', 'inputstream.smoothstream')
+                # Start Playing
+                xbmcplugin.setResolvedUrl(addon_handle, True, listitem=li)
+            else:
+                xbmcgui.Dialog().notification('SkyGo Fehler', 'Keine Berechtigung zum Abspielen dieses Eintrages', xbmcgui.NOTIFICATION_ERROR, 2000, True)
+        else:
+            xbmcgui.Dialog().notification('SkyGo Fehler', 'Fehler bei Login', xbmcgui.NOTIFICATION_ERROR, 2000, True)
+            print 'Fehler beim Einloggen'
 

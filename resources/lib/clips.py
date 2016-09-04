@@ -1,10 +1,5 @@
 import sys
 import json
-import xbmcaddon
-import xbmcgui
-import xbmcplugin
-import common
-from skygo import SkyGo
 import time
 import base64
 import urllib
@@ -12,10 +7,8 @@ import urllib
 from crypto.cipher import aes_cbc
 #pycrypto
 #from Crypto.Cipher import AES
+from skygo import SkyGo
 skygo = SkyGo()
-
-addon_handle = int(sys.argv[1])
-addon = xbmcaddon.Addon()
 
 secret_key = 'XABD-FHIM-GDFZ-OBDA-URDG-TTRI'
 aes_key = ['826cf604accd0e9d61c4aa03b7d7c890', 'da1553b1515bd6f5f48e250a2074d30c']
@@ -46,21 +39,7 @@ def playClip(clip_id):
         clip_info = skygo.getClipDetails(clip_id)
         token = getClipToken(clip_info['content_subscription'])
         manifest = buildClipUrl(clip_info['videoUrlMSSProtected'], token)
+        
+        skygo.play(manifest, clip_info['package_code'])
 
-        if skygo.may_play(clip_info['package_code']):
-            li = xbmcgui.ListItem(path=manifest)
-            info = {'mediatype': 'movie'}
-            li.setInfo('video', info) 
-            # Force smoothsteam addon
-            li.setProperty('inputstream.smoothstream.license_type', 'com.widevine.alpha')
-            li.setProperty('inputstreamaddon', 'inputstream.smoothstream')
-
-            # Start Playing
-            xbmcplugin.setResolvedUrl(addon_handle, True, listitem=li)
-        else:
-            xbmcgui.Dialog().notification('SkyGo Fehler', 'Keine Berechtigung zum Abspielen dieses Eintrages', xbmcgui.NOTIFICATION_ERROR, 2000, True)
-
-    else:
-        xbmcgui.Dialog().notification('SkyGo Fehler', 'Fehler bei Login', xbmcgui.NOTIFICATION_ERROR, 2000, True)
-        print 'Fehler beim Einloggen'
 

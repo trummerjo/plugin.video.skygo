@@ -1,12 +1,8 @@
 import sys
-import xbmcgui
-import xbmcplugin
 import urlparse
-import requests
-import resources.lib.liveTv as liveTv
-import resources.lib.common as common
 import resources.lib.vod as vod
 import resources.lib.clips as clips
+import resources.lib.liveTv as liveTv
 from skygo import SkyGo
 
 import navigation as nav
@@ -22,11 +18,11 @@ if params:
     print params
 
     if params['action'] == 'playVod':
-        vod.play_vod(params['vod_id'])
+        vod.playAsset(params['vod_id'])
     elif params['action'] == 'playClip':
         clips.playClip(params['id'])
     elif params['action'] == 'playLive':
-        liveTv.playLiveTv(params['manifest'])
+        liveTv.playLiveTv(params['channel_id'])
 
     elif params['action'] == 'listLiveTvChannels':
         nav.listLiveChannels()
