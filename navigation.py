@@ -1,7 +1,7 @@
 # coding: utf8
 import sys
 import os
-import xbmcgui, xbmcplugin
+import xbmcgui, xbmcplugin, xbmcaddon, xbmcvfs
 import requests
 import urllib2
 import json
@@ -77,6 +77,10 @@ def getHeroImage(data):
 
 def getPoster(data):
     if 'logo' in data:
+        if 'name' in data and xbmcaddon.Addon().getSetting('enable_customlogos') == 'true':
+            img = getLocalChannelLogo(data['name'])
+            if img:
+                return img
         return skygo.baseUrl + data['logo']
     if 'dvd_cover' in data:
         return skygo.baseUrl + data['dvd_cover']['path'] + '/' + data['dvd_cover']['file']
@@ -86,6 +90,17 @@ def getPoster(data):
         return skygo.baseUrl + data['picture']
 
     return ''
+
+def getLocalChannelLogo(channel_name):   
+    logo_path = xbmcaddon.Addon().getSetting('logoPath')
+    if not logo_path == '' and xbmcvfs.exists(logo_path):
+        dirs, files = xbmcvfs.listdir(logo_path)
+        for f in files:
+            if f.lower().endswith('.png'):
+                if channel_name.lower().replace(' ', '') in os.path.basename(f).lower().replace(' ', ''):
+                    return os.path.join(logo_path, f)
+
+    return None
 
 def search():
     dlg = xbmcgui.Dialog()
@@ -129,7 +144,6 @@ def listEpisodesFromSeason(series_id, season_id):
     r = requests.get(url)
     data = r.json()['serieRecap']['serie']
     xbmcplugin.setContent(addon_handle, 'episodes')
-    print data
     for season in data['seasons']['season']:
         if str(season['id']) == str(season_id):
             for episode in season['episodes']['episode']:
@@ -138,7 +152,7 @@ def listEpisodesFromSeason(series_id, season_id):
                 li.setProperty('IsPlayable', 'true')
                 li.addContextMenuItems(getWatchlistContextItem({'type': 'Episode', 'data': episode}), replaceItems=False)
                 info = getInfoLabel('Episode', episode)
-                li.setInfo('video', info)
+                #li.setInfo('video', info)
                 li.setLabel('%02d. %s' % (info['episode'], info['title']))
                 li.setArt({'poster': skygo.baseUrl + season['path'], 
                            'fanart': getHeroImage(data),
