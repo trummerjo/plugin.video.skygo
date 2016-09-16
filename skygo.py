@@ -84,11 +84,12 @@ class SkyGo:
         login = "email="+username
         if not re.match(r"^[A-Za-z0-9\.\+_-]+@[A-Za-z0-9\._-]+\.[a-zA-Z]*$", username):
         	login = "customerCode="+username
-        
+
         r = self.session.get("https://www.skygo.sky.de/SILK/services/public/session/login?version=12354&platform=web&product=SG&"+login+"&password="+password+"&remMe=true")
         #Parse jsonp
         response = r.text[3:-1]
         response = json.loads(response)
+        print response
         return response
 
     def login(self):
@@ -99,8 +100,8 @@ class SkyGo:
             self.session.cookies.clear_session_cookies()
             response = self.sendLogin(username, password)
 
-            # if login is correct but other session is active ask user if other session should be killed
-            if response['resultCode'] == 'T_206':
+            # if login is correct but other session is active ask user if other session should be killed - T_227=SkyGoExtra
+            if response['resultCode'] in ['T_206', 'T_227']:
                 kill_session = False
                 if autoKillSession == 'true':
                     kill_session = True
@@ -196,7 +197,7 @@ class SkyGo:
         return r.json()['detail']
 
     def get_init_data(self, session_id, apix_id):
-        init_data = 'kid={UUID}&sessionId='+session_id+'&apixId='+apix_id+'&platformId=WEB&product=BW&channelId='
+        init_data = 'kid={UUID}&sessionId='+session_id+'&apixId='+apix_id+'&platformId=&product=BW&channelId='
         init_data = struct.pack('1B', *[30])+init_data
         init_data = base64.urlsafe_b64encode(init_data)
         return init_data
