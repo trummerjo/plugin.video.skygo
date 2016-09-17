@@ -97,7 +97,7 @@ def getLocalChannelLogo(channel_name):
         dirs, files = xbmcvfs.listdir(logo_path)
         for f in files:
             if f.lower().endswith('.png'):
-                if channel_name.lower().replace(' ', '') in os.path.basename(f).lower().replace(' ', ''):
+                if channel_name.lower().replace(' ', '') == os.path.basename(f).lower().replace('.png', '').replace(' ', ''):
                     return os.path.join(logo_path, f)
 
     return None
