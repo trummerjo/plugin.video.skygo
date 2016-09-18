@@ -1,7 +1,7 @@
 # coding: utf8
 import sys
 import os
-import xbmcgui, xbmcplugin, xbmcaddon, xbmcvfs
+import xbmc, xbmcgui, xbmcplugin, xbmcaddon, xbmcvfs
 import requests
 import urllib2
 import json
@@ -11,6 +11,7 @@ from skygo import SkyGo
 import watchlist
 
 addon_handle = int(sys.argv[1])
+icon_file = xbmc.translatePath(xbmcaddon.Addon().getAddonInfo('path')+'/icon.png').decode('utf-8')
 skygo = SkyGo()
 
 #Blacklist: diese nav_ids nicht anzeigen
@@ -30,15 +31,11 @@ def getNav():
      
 def liveChannelsDir():
     url = common.build_url({'action': 'listLiveTvChannels'})
-    li = xbmcgui.ListItem('Livesender')
-    xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
-                                listitem=li, isFolder=True)
+    addDir('Livesender', url)
 
 def watchlistDir():
     url = common.build_url({'action': 'watchlist'})
-    li = xbmcgui.ListItem('Merkliste')
-    xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
-                                listitem=li, isFolder=True)
+    addDir('Merkliste', url)
 
 def rootDir():
     print sys.argv
@@ -50,18 +47,21 @@ def rootDir():
         if item.attrib['hide'] == 'true' or item.tag == 'item':
             continue
         url = common.build_url({'action': 'listPage', 'id': item.attrib['id']})
+        addDir(item.attrib['label'], url)
         li = xbmcgui.ListItem(item.attrib['label'])
-        xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
-                                    listitem=li, isFolder=True)
 
     #Merkliste
     watchlistDir()
     #Suchfunktion
     url = common.build_url({'action': 'search'})
-    li = xbmcgui.ListItem('Suche')
-    xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
-                                listitem=li, isFolder=True)     
+    addDir('Suche', url)
+     
     xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=True)
+
+def addDir(label, url, icon=icon_file):
+    li = xbmcgui.ListItem(label, iconImage=icon)
+    xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
+                                listitem=li, isFolder=True)
     
 def getHeroImage(data):
     if 'main_picture' in data:
@@ -301,7 +301,7 @@ def getWatchlistContextItem(item, delete=False):
 def listAssets(asset_list, isWatchlist=False):
     for item in asset_list:
         isPlayable = False
-        li = xbmcgui.ListItem(label=item['label'])
+        li = xbmcgui.ListItem(label=item['label'], iconImage=icon_file)
         print item
         if item['type'] in ['Film', 'Episode', 'Sport', 'Clip', 'Series', 'live', 'searchresult']:
             isPlayable = True
@@ -344,10 +344,9 @@ def listPath(path):
     else:
         return False
     if 'sort_by_lexic_p' in path:
-        li = xbmcgui.ListItem(label='[A-Z]')
         url = common.build_url({'action': 'listPage', 'path': path[0:path.index('sort_by_lexic_p')] + 'header.json'})
-        xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
-                                    listitem=li, isFolder=True)
+        addDir('[A-Z]', url)
+
     listitems = parseListing(page, path)
     listAssets(listitems)       
 
@@ -377,14 +376,13 @@ def listPage(page_id):
             listPath(items[0].attrib['path'])
             return
     for item in items:
-        li = xbmcgui.ListItem(item.attrib['label'])
+        url = ''
         if item.tag == 'item':
             url = common.build_url({'action': 'listPage', 'path': item.attrib['path']})
         elif item.tag == 'section':
             url = common.build_url({'action': 'listPage', 'id': item.attrib['id']})
 
-        xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
-                                    listitem=li, isFolder=True)
+        addDir(item.attrib['label'], url)
 
     if len(items) > 0:
         xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=True)         

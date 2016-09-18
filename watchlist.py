@@ -15,17 +15,13 @@ base_url = 'https://www.skygo.sky.de/SILK/services/public/watchlist/'
 
 def rootDir():
     url = common.build_url({'action': 'watchlist', 'list': 'Film'})
-    li = xbmcgui.ListItem('Filme')
-    xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
-                                    listitem=li, isFolder=True)
+    nav.addDir('Filme', url)
+
     url = common.build_url({'action': 'watchlist', 'list': 'Episode'})
-    li = xbmcgui.ListItem('Episoden')
-    xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
-                                    listitem=li, isFolder=True)
+    nav.addDir('Episoden', url)
+
     url = common.build_url({'action': 'watchlist', 'list': 'Sport'})
-    li = xbmcgui.ListItem('Sport')
-    xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
-                                    listitem=li, isFolder=True)
+    nav.addDir('Sport', url)
 
     xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=False)    
 
