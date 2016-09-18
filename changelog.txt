@@ -1,0 +1,12 @@
+1.0.0
+- Unterstützung für Sport Wiederholungen und Mediatheken
+- Livesender auch bei nicht Live-Events (derzeit werden von Sky nur Sportsender angeboten)
+- Mehr Inhalte werden angezeigt
+- Unterstützung der Merkliste
+- Suchfunktion
+- Anzeige der Medieninformationen auch im OSD
+- Umstellung der Menüstruktur (z.B. Serie->Staffeln->Episoden)
+- Option um eigene Logos für die Livesender zu verwenden
+- Unterstützung für SkyGo Extra
+0.0.2
+- Initial release forked from https://github.com/trummerjo/plugin.video.skygo/tree/develop
