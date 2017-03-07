@@ -4,5 +4,7 @@
       <setting id="email" type="text" label="E-Mail" default="" />
       <setting id="password" type="text" option="hidden" label="Passwort" default="" />
       <setting id="autoKillSession" type="bool" default="false" label="Andere Sessions automatisch beenden"></setting>
+      <setting id="enable_customlogos" type="bool" label="Verwende eigene Senderlogos" default="false" />
+      <setting id="logoPath" type="folder" default="" visible="!eq(-1,false)" label="Pfad zu den Logos" />
   </category>
 </settings>

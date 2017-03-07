@@ -1,15 +1,19 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="plugin.video.skygo.de" name="Skygo" version="0.0.1" provider-name="jojo">
+<addon id="plugin.video.skygo.de" name="SkyGo" version="1.0.0" provider-name="jojo, frankr612">
   <requires>
     <import addon="xbmc.python" version="2.1.0"/>
     <import addon="script.module.requests" version="2.9.1"/>
     <import addon="script.module.routing" version="0.2.0"></import>
+    <import addon="script.module.cryptopy" version="1.2.6"></import>
   </requires>
   <extension point="xbmc.python.pluginsource" library="default.py">
     <provides>video</provides>
   </extension>
   <extension point="xbmc.addon.metadata">
-    <summary lang="en_gb">Plugin for SkyGo</summary>
+    <summary lang="de">Plugin für SkyGo Deutschland</summary>
+    <summary lang="en_gb">Plugin for SkyGo Germany</summary>
+    <description lang="de">Abonennten von Sky Deutschland mit Zugang zu SkyGo (Extra) erhalten Zugriff auf sämtliche Inhalte
+    Achtung: Dies ist kein offizielles Addon und wird von Sky Deutschland Fernsehen GmbH &amp; Co. KG nicht unterstützt</description>
     <description lang="en_gb">Allows you to stream all your content from german skygo. 
     ***Attention: Addon is unofficial and not related to or supported by Sky Deutschland Fernsehen GmbH &amp; Co. KG***</description>
     <disclaimer lang="en_gb"></disclaimer>

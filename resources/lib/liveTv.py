@@ -1,36 +1,29 @@
 import sys
-
+import requests
 import xbmcaddon
 import xbmcgui
 import xbmcplugin
-import common
 from skygo import SkyGo
-
 
 addon_handle = int(sys.argv[1])
 addon = xbmcaddon.Addon()
-username = addon.getSetting('email')
-password = addon.getSetting('password')
 skygo = SkyGo()
 
-
-def generate_channel_list():
-    channels = skygo.getChannels()
-    xbmcplugin.setContent(addon_handle, 'videos')
-    for channel in channels:
-        url = common.build_url({'action': 'playLiveTvChannel', 'epg_channel_id': channel['id'], 'mediaUrl': channel['mediaurl']})
-        li = xbmcgui.ListItem(label=channel['name'])
-        li.setProperty('IsPlayable', 'true')
-        li.setArt({'thumb': skygo.baseUrl+channel['logo']})
-        info = {
-            'mediatype': 'video'
-        }
-        li.setInfo('video', info)
-        xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
-                                    listitem=li, isFolder=False)
-
-    xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=False)
-
+def playLiveTv(channel_id):
+    #hardcoded apixId for live content
+    apix_id = 'livechannel_127'
+    url = 'http://www.skygo.sky.de/epgd/sg/ipad/excerpt/'
+    r = requests.get(url)
+    data = r.json()
+    for tab in data:
+        for channel in tab['eventList']:
+            if channel['channel']['id'] == channel_id:
+                if 'msMediaUrl' in channel['channel']:
+                    skygo.play(channel['channel']['msMediaUrl'], channel['channel']['mobilepc'], apix_id=apix_id)
+                elif 'assetid' in channel['channel']['event']:
+                    pass
+                    #todo play asset from archive - actually not needed
+                return
 
 def play_live_tv(epg_channel_id):
     # Get Current running event on channel
@@ -45,7 +38,7 @@ def play_live_tv(epg_channel_id):
         manifest_url = playInfo['manifestUrl']
 
         # Login to get session
-        login = skygo.login(username, password)
+        login = skygo.login()
         session_id = skygo.sessionId
 
         # create init data for licence acquiring

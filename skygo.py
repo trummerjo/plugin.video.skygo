@@ -1,3 +1,4 @@
+import sys
 import base64
 import struct
 
@@ -12,7 +13,7 @@ import xml.etree.ElementTree as ET
 
 import xbmc
 import xbmcgui
-import xbmcaddon
+import xbmcaddon, xbmcplugin
 
 LOGIN_STATUS = { 'SUCCESS': 'T_100',
                   'SESSION_INVALID': 'S_218',
@@ -21,7 +22,10 @@ LOGIN_STATUS = { 'SUCCESS': 'T_100',
 licence_url = 'https://wvguard.sky.de/WidevineLicenser/WidevineLicenser|User-Agent=Mozilla%2F5.0%20(X11%3B%20Linux%20x86_64)%20AppleWebKit%2F537.36%20(KHTML%2C%20like%20Gecko)%20Chrome%2F49.0.2623.87%20Safari%2F537.36&Referer=http%3A%2F%2Fwww.skygo.sky.de%2Ffilm%2Fscifi--fantasy%2Fjupiter-ascending%2Fasset%2Ffilmsection%2F144836.html&Content-Type=|R{SSM}|'
 
 addon = xbmcaddon.Addon()
+addon_handle = int(sys.argv[1])
 autoKillSession = addon.getSetting('autoKillSession')
+username = addon.getSetting('email')
+password = addon.getSetting('password')
 print autoKillSession
 datapath = xbmc.translatePath(addon.getAddonInfo('profile'))
 cookiePath = datapath + 'COOKIES'
@@ -50,13 +54,6 @@ class SkyGo:
         return
 
 
-    def getLandingPage(self):
-        return self.getPage(self.baseUrl + '/sg/multiplatform/web/json/landingpage/1.json')
-
-    def getPage(self, url):
-        r = requests.get(url)
-        return r.json()['listing']
-
     def isLoggedIn(self):
         """Check if User is still logged in with the old cookies"""
         r = self.session.get('https://www.skygo.sky.de/SILK/services/public/user/getdata?product=SG&platform=web&version=12354')
@@ -78,8 +75,6 @@ class SkyGo:
                 return False
         return False
 
-
-
     def killSessions(self):
         # Kill other sessions
         r = self.session.get('https://www.skygo.sky.de/SILK/services/public/session/kill/web?version=12354&platform=web&product=SG')
@@ -89,14 +84,15 @@ class SkyGo:
         login = "email="+username
         if not re.match(r"^[A-Za-z0-9\.\+_-]+@[A-Za-z0-9\._-]+\.[a-zA-Z]*$", username):
         	login = "customerCode="+username
-        
-        r = self.session.get("https://www.skygo.sky.de/SILK/services/public/session/login?version=1354&platform=web&product=SG&"+login+"&password="+password+"&remMe=true")
+
+        r = self.session.get("https://www.skygo.sky.de/SILK/services/public/session/login?version=12354&platform=web&product=SG&"+login+"&password="+password+"&remMe=true")
         #Parse jsonp
         response = r.text[3:-1]
         response = json.loads(response)
+        print response
         return response
 
-    def login(self, username, password):
+    def login(self):
 
         # If already logged in and active session everything is fine
         if not self.isLoggedIn():
@@ -104,8 +100,8 @@ class SkyGo:
             self.session.cookies.clear_session_cookies()
             response = self.sendLogin(username, password)
 
-            # if login is correct but other session is active ask user if other session should be killed
-            if response['resultCode'] == 'T_206':
+            # if login is correct but other session is active ask user if other session should be killed - T_227=SkyGoExtra
+            if response['resultCode'] in ['T_206', 'T_227']:
                 kill_session = False
                 if autoKillSession == 'true':
                     kill_session = True
@@ -190,33 +186,44 @@ class SkyGo:
     def may_play(self, entitlement):
         return entitlement in self.entitlements
 
-    def getMostWatched(self):
-        r = requests.get("http://www.skygo.sky.de/sg/multiplatform/web/json/automatic_listing/film/mostwatched/32.json")
-        mostWatchedJson = r.json()
-        return mostWatchedJson['listing']['asset_listing']['asset']
+    def getAssetDetails(self, asset_id):
+        url = 'http://www.skygo.sky.de/sg/multiplatform/web/json/details/asset/' + str(asset_id) + '.json'       
+        r = self.session.get(url)
+        return r.json()['asset']
 
-    def getListing(self, path):
-        r = requests.get(self.baseUrl + path)
-        return r.json()['listing']['asset_listing']['asset']
-
-
-    def getChannels(self):
-        r = requests.get("http://www.skygo.sky.de/epgd/sg/web/channelList")
-        channels = r.json()['channelList']
-        # Filter for channels with mediaurl
-        channels = [c for c in channels if c['mediaurl'] != '']
-
-        return channels
-
-
-    def getSeriesInfo(self, series_id):
-        r = requests.get(self.baseUrl + "/sg/multiplatform/web/json/details/series/"+ series_id +"_global.json")
-        return r.json()['serieRecap']['serie']
+    def getClipDetails(self, clip_id):
+        url = 'http://www.skygo.sky.de/sg/multiplatform/web/json/details/clip/' + str(clip_id) + '.json'       
+        r = self.session.get(url)
+        return r.json()['detail']
 
     def get_init_data(self, session_id, apix_id):
-        init_data = 'kid={UUID}&sessionId='+session_id+'&apixId='+apix_id+'&platformId=WEB&product=BW&channelId='
+        init_data = 'kid={UUID}&sessionId='+session_id+'&apixId='+apix_id+'&platformId=&product=BW&channelId='
         init_data = struct.pack('1B', *[30])+init_data
         init_data = base64.urlsafe_b64encode(init_data)
         return init_data
 
+    def play(self, manifest_url, package_code, info_tag=None, apix_id=None):
+        if self.login():
+            if self.may_play(package_code):
+                init_data = None
+                # create init data for license acquiring
+                if apix_id:
+                    init_data = self.get_init_data(self.sessionId, apix_id)
+                # Prepare new ListItem to start playback
+                li = xbmcgui.ListItem(path=manifest_url)
+                if info_tag:
+                    li.setInfo('video', info_tag)
+                # Force smoothsteam addon
+                li.setProperty('inputstream.smoothstream.license_type', 'com.widevine.alpha')
+                if init_data:
+                    li.setProperty('inputstream.smoothstream.license_key', self.licence_url)
+                    li.setProperty('inputstream.smoothstream.license_data', init_data)
+                li.setProperty('inputstreamaddon', 'inputstream.smoothstream')
+                # Start Playing
+                xbmcplugin.setResolvedUrl(addon_handle, True, listitem=li)
+            else:
+                xbmcgui.Dialog().notification('SkyGo Fehler', 'Keine Berechtigung zum Abspielen dieses Eintrages', xbmcgui.NOTIFICATION_ERROR, 2000, True)
+        else:
+            xbmcgui.Dialog().notification('SkyGo Fehler', 'Fehler bei Login', xbmcgui.NOTIFICATION_ERROR, 2000, True)
+            print 'Fehler beim Einloggen'
 
