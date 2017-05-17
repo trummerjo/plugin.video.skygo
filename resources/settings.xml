@@ -1,10 +1,19 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <settings>
-  <category label="Settings">
+  <category label="Login">
       <setting id="email" type="text" label="E-Mail" default="" />
       <setting id="password" type="text" option="hidden" label="Passwort" default="" />
       <setting id="autoKillSession" type="bool" default="false" label="Andere Sessions automatisch beenden"></setting>
+  </category>
+  <category label="Jugendschutz">
+      <setting id="js_maxrating" type="number" default="-1" enable="false" visible="gt(0,-1)" label="Spiele Inhalte bis FSK" />
+      <setting id="js_showall" type="bool" default="true" visible="gt(-1,-1)" enable="false" label="Zeige alle Inhalte"/>
+      <setting id="js_askforpin" type="bool" default="true" visible="gt(-2,-1)" label="PIN Abfrage"/>
+      <setting type="action" visible="true" label="Einstellungen bearbeiten (PIN-Eingabe erforderlich)" action="RunPlugin(plugin://plugin.video.skygo.de?action=parentalSettings)" />
+  </category>
+  <category label="Sonstiges">
       <setting id="enable_customlogos" type="bool" label="Verwende eigene Senderlogos" default="false" />
-      <setting id="logoPath" type="folder" default="" visible="!eq(-1,false)" label="Pfad zu den Logos" />
+      <setting id="logoPath" type="folder" default="" visible="!eq(-1,false)" label="Pfad zu den Logos" />    
+      <setting id="lookup_tmdb_rating" type="bool" label="Scrappe User-Rating von TMDb" default="true" />
   </category>
 </settings>
