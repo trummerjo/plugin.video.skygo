@@ -1,3 +1,16 @@
+1.0.9
+- Ermögliche Scrappen von TheMovieDB Ratings (Linkinsoldier)
+1.0.8.1
+- Anpassung für xbmc.gui 5.13.0
+1.0.8
+- Anpassung für inputstream.adaptive Addon
+1.0.7
+- Jungendschutz Einstellungen hinzugefügt
+1.0.3
+1.0.2
+- Ausblenden von doppelten Einträgen mit gleichen Streams bei den Livesendern
+1.0.1
+- Zeitangabe bei LivePlaner Events hinzugefügt (thx @ eric1905)
 1.0.0
 - Unterstützung für Sport Wiederholungen und Mediatheken
 - Livesender auch bei nicht Live-Events (derzeit werden von Sky nur Sportsender angeboten)

@@ -5,10 +5,16 @@ import xbmc, xbmcgui, xbmcplugin, xbmcaddon, xbmcvfs
 import requests
 import urllib2
 import json
+import datetime
+import time
 import xml.etree.ElementTree as ET
 import resources.lib.common as common
 from skygo import SkyGo
 import watchlist
+
+#New Import from Linkinsoldier
+import urllib
+import base64
 
 addon_handle = int(sys.argv[1])
 icon_file = xbmc.translatePath(xbmcaddon.Addon().getAddonInfo('path')+'/icon.png').decode('utf-8')
@@ -20,6 +26,9 @@ nav_blacklist = [34, 32, 27, 15]
 #Force: anzeige dieser nav_ids erzwingen
 #Sport: Wiederholungen
 nav_force = [35, 36, 37, 161]
+
+#Jugendschutz
+js_showall = xbmcaddon.Addon().getSetting('js_showall')
 
 xbmcplugin.addSortMethod(int(sys.argv[1]), xbmcplugin.SORT_METHOD_NONE)
 xbmcplugin.addSortMethod(int(sys.argv[1]), xbmcplugin.SORT_METHOD_LABEL)
@@ -62,6 +71,26 @@ def addDir(label, url, icon=icon_file):
     li = xbmcgui.ListItem(label, iconImage=icon)
     xbmcplugin.addDirectoryItem(handle=addon_handle, url=url,
                                 listitem=li, isFolder=True)
+
+def showParentalSettings():
+    fsk_list = ['Deaktiviert', '0', '6', '12', '16', '18']
+    dlg = xbmcgui.Dialog()
+    code = dlg.input('PIN Code', type=xbmcgui.INPUT_NUMERIC)
+    if code == xbmcaddon.Addon().getSetting('password'):
+        idx = dlg.select('Wähle maximale FSK Alterstufe', fsk_list)
+        if idx >= 0:
+            fsk_code = fsk_list[idx]
+            if fsk_code == 'Deaktiviert':
+                xbmcaddon.Addon().setSetting('js_maxrating', '-1')
+            else:
+                xbmcaddon.Addon().setSetting('js_maxrating', fsk_list[idx])
+        if idx > 0:
+            if dlg.yesno('Jugendschutz', 'Sollen Inhalte mit einer Alterseinstufung über ', 'FSK ' + fsk_list[idx] + ' angezeigt werden?'):
+                xbmcaddon.Addon().setSetting('js_showall', 'true')
+            else:
+                xbmcaddon.Addon().setSetting('js_showall', 'false')
+    else:
+        xbmcgui.Dialog().notification('SkyGo - Jugendschutz', 'Fehlerhafte PIN', xbmcgui.NOTIFICATION_ERROR, 2000, True)
     
 def getHeroImage(data):
     if 'main_picture' in data:
@@ -123,20 +152,24 @@ def search():
     listAssets(listitems)
 
 def listLiveChannels():
-    listitems = []
-    channelid_list = []
+    mediaurls = {}
     url = 'http://www.skygo.sky.de/epgd/sg/ipad/excerpt/'
     r = requests.get(url)
     data = r.json()
     for tab in data:
         for event in tab['eventList']:
-            if event['channel']['msMediaUrl'].startswith('http://'):
+            media_url = event['channel']['msMediaUrl']
+            if media_url.startswith('http://'):
                 url = common.build_url({'action': 'playLive', 'channel_id': event['channel']['id']})                
-                if not event['channel']['id'] in channelid_list:
-                    listitems.append({'type': 'live', 'label': event['channel']['name'], 'url': url, 'data': event})
-                    channelid_list.append(event['channel']['id'])
+                #zeige keine doppelten sender mit gleichem stream - nutze hd falls verfügbar
+                if not media_url in mediaurls.keys():                 
+                    mediaurls[media_url] = {'type': 'live', 'label': event['channel']['name'], 'url': url, 'data': event}
+                else:
+                    if mediaurls[media_url]['data']['channel']['hd'] == 0 and event['channel']['hd'] == 1:
+                        mediaurls[media_url] = {'type': 'live', 'label': event['channel']['name'], 'url': url, 'data': event}
+                    
 
-    listAssets(listitems)
+    listAssets(sorted(mediaurls.values(), key=lambda k:k['data']['channel']['id']))
     
 
 def listEpisodesFromSeason(series_id, season_id):
@@ -147,6 +180,11 @@ def listEpisodesFromSeason(series_id, season_id):
     for season in data['seasons']['season']:
         if str(season['id']) == str(season_id):
             for episode in season['episodes']['episode']:
+                #Check Altersfreigabe / Jugendschutzeinstellungen
+                if 'parental_rating' in episode:
+                    if js_showall == 'false':
+                        if not skygo.parentalCheck(episode['parental_rating']['value'], play=False):   
+                            continue
                 url = common.build_url({'action': 'playVod', 'vod_id': episode['id']})
                 li = xbmcgui.ListItem()
                 li.setProperty('IsPlayable', 'true')
@@ -245,6 +283,31 @@ def parseListing(page, path):
 
     return listitems
 
+def buildLiveEventTag(event_info):
+    tag = ''
+    dayDict = {'Monday': 'Montag', 'Tuesday': 'Dienstag', 'Wednesday': 'Mittwoch', 'Thursday': 'Donnerstag', 'Friday': 'Freitag', 'Saturday': 'Samstag', 'Sunday': 'Sonntag'}
+    if event_info != '':  
+        now = datetime.datetime.now()
+
+        strStartTime = '%s %s' % (event_info['start_date'], event_info['start_time'])
+        strEndTime = '%s %s' % (event_info['end_date'], event_info['end_time'])
+        start_time = datetime.datetime.fromtimestamp(time.mktime(time.strptime(strStartTime, "%Y/%m/%d %H:%M")))
+        end_time = datetime.datetime.fromtimestamp(time.mktime(time.strptime(strEndTime, "%Y/%m/%d %H:%M")))
+
+        if (now >= start_time) and (now <= end_time):
+            tag = '[COLOR red][Live][/COLOR]'
+        elif start_time.date() == datetime.datetime.today().date():
+            tag = '[COLOR blue][Heute ' + event_info['start_time'] + '][/COLOR]'
+        elif start_time.date() == (datetime.datetime.today() + datetime.timedelta(days=1)).date():
+            tag = '[COLOR blue][Morgen ' + event_info['start_time'] + '][/COLOR]'
+        else:
+            day = start_time.strftime('%A')
+            if not day in dayDict.values():
+                day = day.replace(day, dayDict[day])[0:2]
+            tag = '[COLOR blue][' + day + ', ' + start_time.strftime("%d.%m %H:%M]") + '[/COLOR]'
+    
+    return tag
+
 def getInfoLabel(asset_type, data):    
     info = {}
     info['title'] = data.get('title', '')
@@ -252,13 +315,20 @@ def getInfoLabel(asset_type, data):
     if not data.get('year_of_production', '') == '':
         info['year'] = data.get('year_of_production', '')
     info['plot'] = data.get('synopsis', '').replace('\n', '').strip()
-    print data
     if info['plot'] == '':
         info['plot'] = data.get('description', '').replace('\n', '').strip()
     info['duration'] = data.get('length', 0)*60
     if asset_type == 'Film':
         info['mediatype'] = 'movie'
         info['genre'] = data.get('category', {}).get('main', {}).get('content', '')
+        if xbmcaddon.Addon().getSetting('lookup_tmdb_rating') == 'true' and not info['title'] == '': 
+            title = info['title'].encode("utf-8") 
+            xbmc.log('Searching Rating for %s at tmdb.com' % title.upper())
+            rating = getTMDBRating(title)
+            if rating is not None:
+                info['rating'] = str(rating)
+                info['plot'] = 'User-Rating: '+ info['rating'] + ' / 10 (from TMDb). \n\n' + info['plot']
+                xbmc.log( "Result of get Rating: %s" % (rating) )
     if asset_type == 'Series':
         info['year'] = data.get('year_of_production_start', '')
     if asset_type == 'Episode':
@@ -271,7 +341,9 @@ def getInfoLabel(asset_type, data):
 #        else:
 #            info['title'] = '%02d - %s' % (info['episode'], info['title'])
     if asset_type == 'Sport':
-        pass
+        if data.get('current_type', '') == 'Live':
+            #LivePlanner listing
+            info['title'] = buildLiveEventTag(data['technical_event']['on_air']) + ' ' + info['title']
     if asset_type == 'Clip':
         info['title'] = data['item_title']
         info['plot'] = data.get('teaser_long', '')
@@ -302,13 +374,17 @@ def listAssets(asset_list, isWatchlist=False):
     for item in asset_list:
         isPlayable = False
         li = xbmcgui.ListItem(label=item['label'], iconImage=icon_file)
-        print item
         if item['type'] in ['Film', 'Episode', 'Sport', 'Clip', 'Series', 'live', 'searchresult']:
             isPlayable = True
+            #Check Altersfreigabe / Jugendschutzeinstellungen
+            if 'parental_rating' in item['data']:
+                if js_showall == 'false':
+                    if not skygo.parentalCheck(item['data']['parental_rating']['value'], play=False):   
+                        continue
             info = getInfoLabel(item['type'], item['data'])
             li.setInfo('video', info)
             li.setLabel(info['title'])
-            li.setArt({'poster': getPoster(item['data']), 'fanart': getHeroImage(item['data'])})       
+            li.setArt({'poster': getPoster(item['data']), 'fanart': getHeroImage(item['data'])})
         if item['type'] in ['Film']:
             xbmcplugin.setContent(addon_handle, 'movies')
         elif item['type'] in ['Series']:
@@ -368,6 +444,45 @@ def getParentNode(nodes, page_id):
             return item
     return None
 
+def getTMDBRating(title, attempt = 1, content='movie', year=None):
+    rating = None
+    splitter = [' - ', ': ', ', ']
+    yearorg = year
+    tmdb_api = base64.b64decode('YTAwYzUzOTU0M2JlMGIwODE4YmMxOTRhN2JkOTVlYTU=') # ApiKey Linkinsoldier
+    # tmdb_api = base64.b64decode('YjM0NDkwYzA1NmYwZGQ5ZTNlYzlhZjIxNjdhNzMxZjQ=') # ApiKey from Sandman's Amazon VOD Addon
+    Language = 'de'
+    str_year = '&year=' + str(year) if year else ''
+    movie = urllib.quote_plus(title)
+	
+    try:
+		#Define the moviedb Link zu download the json
+        host = 'http://api.themoviedb.org/3/search/%s?api_key=%s&language=%s&query=%s%s' % (content, tmdb_api, Language, movie, str_year)
+		#Download and load the corresponding json
+        data = json.load(urllib2.urlopen(host))	
+    
+        if data['total_results'] > 0:
+            result = data['results'][0]
+            if result['vote_average']:
+                rating = float(result['vote_average'])
+            tmdb_id = result['id']
+        else:
+            xbmc.log('No movie found with Title: %s' % title )
+        
+    except (urllib2.URLError), e:
+        xbmc.log('Error reason: %s' % e )
+
+        if '429' or 'timed out' in e:
+            attempt += 1
+            logout = 'Attempt #%s' % attempt
+            if '429' in e:
+                logout += '. Too many requests - Pause 10 sec'
+                xbmc.sleep(10000)
+            xbmc.log(logout)
+            if attempt < 3:
+                return getTMDBRating(title, attempt)
+        return rating               
+    return rating
+	
 def listPage(page_id):
     nav = getNav()
     items = getPageItems(nav, page_id)
@@ -386,5 +501,3 @@ def listPage(page_id):
 
     if len(items) > 0:
         xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=True)         
-
-
