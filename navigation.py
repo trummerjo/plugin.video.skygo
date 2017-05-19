@@ -203,6 +203,8 @@ def listLiveTvChannels(channeldir_name):
                             mediainfo = getAssetDetailsFromCache(event['event']['assetid'])
                     except:
                         pass
+                   
+                # xbmc.log("[plugin.video.skygo.de]: %s = %s" % ('media_url', media_url))
 
                 #zeige keine doppelten sender mit gleichem stream - nutze hd falls verfügbar
                 if media_url != '':
@@ -210,6 +212,7 @@ def listLiveTvChannels(channeldir_name):
                         mediaurls[media_url] = {'type': 'live', 'label': event['channel']['name'], 'url': url, 'data': event, 'mediainfo' : mediainfo}
                     elif mediaurls[media_url]['data']['channel']['hd'] == 0 and event['channel']['hd'] == 1 and event['channel']['name'].find('+') == -1:
                         mediaurls[media_url] = {'type': 'live', 'label': event['channel']['name'], 'url': url, 'data': event, 'mediainfo' : mediainfo}
+            # xbmc.log("[plugin.video.skygo.de]: %s = %s" % ('mediaurls', mediaurls))
             listAssets(sorted(mediaurls.values(), key=lambda k:k['data']['channel']['name']))
 
 def getlistLiveChannelData():
@@ -378,8 +381,7 @@ def getInfoLabel(asset_type, item_data, mediainfo = {}):
         except:
             pass
     else:
-        data = mediainfo
-    
+        data = mediainfo 
     info = {}
     info['title'] = data.get('title', '')
     info['originaltitle'] = data.get('original_title', '')
@@ -485,6 +487,7 @@ def getWatchlistContextItem(item, delete=False):
 def listAssets(asset_list, isWatchlist=False):
     for item in asset_list:
         isPlayable = False
+        # xbmc.log("[plugin.video.skygo.de]: %s = %s" % ('item', item))
         li = xbmcgui.ListItem(label=item['label'], iconImage=icon_file)
         if item['type'] in ['Film', 'Episode', 'Sport', 'Clip', 'Series', 'live', 'searchresult']:
             isPlayable = True
@@ -494,6 +497,7 @@ def listAssets(asset_list, isWatchlist=False):
                     if not skygo.parentalCheck(item['data']['parental_rating']['value'], play=False):   
                         continue
             info = getInfoLabel(item['type'], item['data'], item['mediainfo'] if 'mediainfo' in item else {})
+            # xbmc.log("[plugin.video.skygo.de]: %s = %s" % ('info', info))
             li.setInfo('video', info)
             li.setLabel(info['title'])
             li.setArt({'poster': getPoster(item['data']), 'fanart': getHeroImage(item['data'])})       
@@ -510,7 +514,7 @@ def listAssets(asset_list, isWatchlist=False):
         elif item['type'] == 'searchresult':          
             xbmcplugin.setContent(addon_handle, 'movies')
         elif item['type'] == ('live'):
-            xbmcplugin.setContent(addon_handle, 'LiveTV')
+            # xbmcplugin.setContent(addon_handle, 'LiveTV')
             poster = getPoster(item['data']['channel']) if item['data']['channel']['msMediaUrl'].startswith('http://') else getPoster(item['mediainfo'])
             fanart = skygo.baseUrl + item['data']['event']['image'] if item['data']['channel']['name'].find('News') == -1 else skygo.baseUrl + '/bin/Picture/817/C_1_Picture_7179_content_4.jpg'
             thumb = skygo.baseUrl + item['data']['event']['image'] if item['data']['channel']['name'].find('News') == -1 else getChannelLogo(item['data']['channel'])
