@@ -409,9 +409,9 @@ def getInfoLabel(asset_type, item_data, mediainfo = {}):
             info['castandrole'] = castandrole_list
         else:
             info['cast'] = cast_list
-        xbmc.log("[plugin.video.skygo.de]: %s = %s" % ('Titel', info['title'].encode("utf-8")))
-        xbmc.log("[plugin.video.skygo.de]: %s = %s" % ('castandrole_list', str(castandrole_list)))
-        xbmc.log("[plugin.video.skygo.de]: %s = %s" % ('cast_list', str(cast_list)))
+        # xbmc.log("[plugin.video.skygo.de]: %s = %s" % ('Titel', info['title'].encode("utf-8")))
+        # xbmc.log("[plugin.video.skygo.de]: %s = %s" % ('castandrole_list', str(castandrole_list)))
+        # xbmc.log("[plugin.video.skygo.de]: %s = %s" % ('cast_list', str(cast_list)))
     if data.get('genre', {}) != '':
         category_list = []
         for category in data.get('genre', {}):
@@ -428,7 +428,7 @@ def getInfoLabel(asset_type, item_data, mediainfo = {}):
         info['plot'] = data.get('teaser_long', '')
         info['genre'] = data.get('item_category_name', '')
     if asset_type == 'live':
-        channel = '[COLOR blue] | ' + item_data['channel']['name'] + '[/COLOR]'
+        channel = '[COLOR blue]' + item_data['channel']['name'] + ' | [/COLOR]'
         info['title'] = item_data['event'].get('subtitle', '')
         info['plot'] = item_data['event'].get('subtitle', '')
         if not item_data['channel']['msMediaUrl'].startswith('http://'):
@@ -445,7 +445,7 @@ def getInfoLabel(asset_type, item_data, mediainfo = {}):
                 asset_type = 'Episode'
                 info['plot'] = 'Folge: ' + data.get('title', '') + '\n\n' + data.get('synopsis', '').replace('\n', '').strip()
                 info['title'] = '%1dx%02d. %s' % (data.get('season_nr', ''), data.get('episode_nr', ''), data.get('serie_title', ''))
-        info['title'] += channel
+        info['title'] = channel + info['title'] 
     if asset_type == 'searchresult':
         info['plot'] = data.get('description', '')
         info['year'] = data.get('year', '')
