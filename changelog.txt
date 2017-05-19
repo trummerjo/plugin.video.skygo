@@ -1,5 +1,9 @@
-1.0.9
-- Ermögliche Scrappen von TheMovieDB Ratings (Linkinsoldier)
+1.9.1
+- Unterstützung für Playready unter Android
+- Mehr Medieninformationen + Cachen der Informationen
+- Mehr Sortieroptionen
+- Anzeige von allen Livessendern, wie auf skygo.sky.de + Gruppierung nach Paketen (Bundesliga/Cinema/Entertainment/Sport)
+- Automatisches Scrappen und Cachen von TMDb Filmen in den Settings - Option in den Settings deaktivierbar
 1.0.8.1
 - Anpassung für xbmc.gui 5.13.0
 1.0.8

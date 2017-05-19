@@ -13,7 +13,7 @@ plugin_base_url = sys.argv[0]
 params = dict(urlparse.parse_qsl(sys.argv[2][1:]))
 
 # Router for all plugin actions
-if params:
+if 'action' in params:
 
     print params
 
@@ -24,8 +24,13 @@ if params:
     elif params['action'] == 'playLive':
         liveTv.playLiveTv(params['channel_id'])
 
+    elif params['action'] == 'listLiveTvChannelDirs':
+        nav.listLiveTvChannelDirs()
     elif params['action'] == 'listLiveTvChannels':
-        nav.listLiveChannels()
+        channeldir_name = ''
+        if 'channeldir_name' in params:
+            channeldir_name = params['channeldir_name']
+        nav.listLiveTvChannels(channeldir_name)
 
     elif params['action'] == 'watchlist':
         if 'list' in params:
@@ -53,6 +58,9 @@ if params:
         nav.listSeasonsFromSeries(params['id'])
     elif params['action'] == 'listSeason':
         nav.listEpisodesFromSeason(params['series_id'], params['id'])
+
+    elif params['action'] == 'parentalSettings':
+        nav.showParentalSettings()
 
 else:
     nav.rootDir()
