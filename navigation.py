@@ -24,6 +24,7 @@ addon = xbmcaddon.Addon()
 assetDetailsCache = StorageServer.StorageServer(addon.getAddonInfo('name') + '.assetdetails', 24 * 30)
 ratingCache = StorageServer.StorageServer(addon.getAddonInfo('name') + '.rating', 24 * 30)
 
+extMediaInfos = addon.getSetting('enable_extended_mediainfos')
 addon_handle = int(sys.argv[1])
 icon_file = xbmc.translatePath(addon.getAddonInfo('path')+'/icon.png').decode('utf-8')
 skygo = SkyGo()
@@ -201,18 +202,17 @@ def listLiveTvChannels(channeldir_name):
                     try:
                         if event['event']['assetid'] > 0:
                             mediainfo = getAssetDetailsFromCache(event['event']['assetid'])
+                            event['mediainfo'] = mediainfo
                     except:
                         pass
-                   
-                # xbmc.log("[plugin.video.skygo.de]: %s = %s" % ('media_url', media_url))
 
                 #zeige keine doppelten sender mit gleichem stream - nutze hd falls verfügbar
                 if media_url != '':
                     if not media_url in mediaurls.keys():                 
-                        mediaurls[media_url] = {'type': 'live', 'label': event['channel']['name'], 'url': url, 'data': event, 'mediainfo' : mediainfo}
+                        mediaurls[media_url] = {'type': 'live', 'label': event['channel']['name'], 'url': url, 'data': event}
                     elif mediaurls[media_url]['data']['channel']['hd'] == 0 and event['channel']['hd'] == 1 and event['channel']['name'].find('+') == -1:
-                        mediaurls[media_url] = {'type': 'live', 'label': event['channel']['name'], 'url': url, 'data': event, 'mediainfo' : mediainfo}
-            # xbmc.log("[plugin.video.skygo.de]: %s = %s" % ('mediaurls', mediaurls))
+                        mediaurls[media_url] = {'type': 'live', 'label': event['channel']['name'], 'url': url, 'data': event}
+
             listAssets(sorted(mediaurls.values(), key=lambda k:k['data']['channel']['name']))
 
 def getlistLiveChannelData():
@@ -373,15 +373,15 @@ def buildLiveEventTag(event_info):
     
     return tag
 
-def getInfoLabel(asset_type, item_data, mediainfo = {}):
+def getInfoLabel(asset_type, item_data):
     data = item_data
-    if len(mediainfo) == 0:
-        try:
-            data = getAssetDetailsFromCache(data['id'])
-        except:
-            pass
-    else:
-        data = mediainfo 
+    if 'mediainfo' in data:
+        data = data['mediainfo']
+    elif extMediaInfos and extMediaInfos == 'true':
+            try:
+                data = getAssetDetailsFromCache(data['id'])
+            except:
+                pass 
     info = {}
     info['title'] = data.get('title', '')
     info['originaltitle'] = data.get('original_title', '')
@@ -409,9 +409,6 @@ def getInfoLabel(asset_type, item_data, mediainfo = {}):
             info['castandrole'] = castandrole_list
         else:
             info['cast'] = cast_list
-        # xbmc.log("[plugin.video.skygo.de]: %s = %s" % ('Titel', info['title'].encode("utf-8")))
-        # xbmc.log("[plugin.video.skygo.de]: %s = %s" % ('castandrole_list', str(castandrole_list)))
-        # xbmc.log("[plugin.video.skygo.de]: %s = %s" % ('cast_list', str(cast_list)))
     if data.get('genre', {}) != '':
         category_list = []
         for category in data.get('genre', {}):
@@ -431,7 +428,7 @@ def getInfoLabel(asset_type, item_data, mediainfo = {}):
         info['title'] = item_data['event'].get('subtitle', '')
         info['plot'] = item_data['event'].get('subtitle', '')
         if not item_data['channel']['msMediaUrl'].startswith('http://'):
-            if len(mediainfo) > 0:
+            if 'mediainfo' in item_data:
                 info['title'] = data.get('title', '')
                 info['plot'] = data.get('synopsis', '').replace('\n', '').strip()
             else:
@@ -456,8 +453,8 @@ def getInfoLabel(asset_type, item_data, mediainfo = {}):
         info['genre'] = data.get('category', '')
     if asset_type == 'Film':
         info['mediatype'] = 'movie'
-        if xbmcaddon.Addon().getSetting('lookup_tmdb_rating') == 'true' and not info['title'] == '': 
-            title = info['title'].encode("utf-8") 
+        if xbmcaddon.Addon().getSetting('lookup_tmdb_rating') == 'true' and not data.get('title', '') == '': 
+            title = data.get('title', '').encode("utf-8") 
             xbmc.log('Searching Rating for %s at tmdb.com' % title.upper())
             rating = getTMDBRatingFromCache(title)
             if rating['rating'] is not None:
@@ -491,7 +488,6 @@ def getWatchlistContextItem(item, delete=False):
 def listAssets(asset_list, isWatchlist=False):
     for item in asset_list:
         isPlayable = False
-        # xbmc.log("[plugin.video.skygo.de]: %s = %s" % ('item', item))
         li = xbmcgui.ListItem(label=item['label'], iconImage=icon_file)
         if item['type'] in ['Film', 'Episode', 'Sport', 'Clip', 'Series', 'live', 'searchresult']:
             isPlayable = True
@@ -500,8 +496,7 @@ def listAssets(asset_list, isWatchlist=False):
                 if js_showall == 'false':
                     if not skygo.parentalCheck(item['data']['parental_rating']['value'], play=False):   
                         continue
-            info = getInfoLabel(item['type'], item['data'], item['mediainfo'] if 'mediainfo' in item else {})
-            # xbmc.log("[plugin.video.skygo.de]: %s = %s" % ('info', info))
+            info = getInfoLabel(item['type'], item['data'])
             li.setInfo('video', info)
             li.setLabel(info['title'])
             li.setArt({'poster': getPoster(item['data']), 'fanart': getHeroImage(item['data'])})       
@@ -518,8 +513,11 @@ def listAssets(asset_list, isWatchlist=False):
         elif item['type'] == 'searchresult':          
             xbmcplugin.setContent(addon_handle, 'movies')
         elif item['type'] == ('live'):
-            # xbmcplugin.setContent(addon_handle, 'LiveTV')
-            poster = getPoster(item['data']['channel']) if item['data']['channel']['msMediaUrl'].startswith('http://') else getPoster(item['mediainfo'])
+            xbmcplugin.setContent(addon_handle, 'files')
+            if 'mediainfo' in item['data']:
+                 poster = getPoster(item['data']['mediainfo'])
+            else:
+                 poster = getPoster(item['data']['channel'])
             fanart = skygo.baseUrl + item['data']['event']['image'] if item['data']['channel']['name'].find('News') == -1 else skygo.baseUrl + '/bin/Picture/817/C_1_Picture_7179_content_4.jpg'
             thumb = skygo.baseUrl + item['data']['event']['image'] if item['data']['channel']['name'].find('News') == -1 else getChannelLogo(item['data']['channel'])
             li.setArt({'poster': poster, 'fanart': fanart, 'thumb': thumb})
