@@ -1,3 +1,6 @@
+1.9.3
+- DeviceId in die Usersettings verschoben. Die ID ist dabei eine zufällige Uuid, die beim ersten Start von Skygo generiert wird.
+Das bedeutet für diejenigen, die die erste Version nutzen und dann updaten, dass eine neue Geräteregistrierung erfolgen wird. 
 1.9.2
 - Fix LiveTV-Bug: No longer set "LiveTV" in Content since it doesnt seem to be supported
 - Create Setting Option to choose LiveTV Display Option: Channel name or Title first
