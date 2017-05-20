@@ -14,6 +14,7 @@
   <category label="Sonstiges">
       <setting id="enable_customlogos" type="bool" label="Verwende eigene Senderlogos" default="false" />
       <setting id="logoPath" type="folder" default="" visible="!eq(-1,false)" label="Pfad zu den Logos" />
-      <setting id="lookup_tmdb_rating" type="bool" label="Scrappe User-Rating von TMDb" default="true" />      
+      <setting id="lookup_tmdb_rating" type="bool" label="Scrappe User-Rating von TMDb" default="true" />
+      <setting id="channel_name_first" type="bool" label="Anzeige Live-TV: Sendername zuerst anzeigen?" default="true" />
   </category>
 </settings>
