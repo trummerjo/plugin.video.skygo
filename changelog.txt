@@ -1,5 +1,6 @@
 1.9.2
 - Fix LiveTV-Bug: No longer set "LiveTV" in Content since it doesnt seem to be supported
+- Create Setting Option to choose LiveTV Display Option: Channel name or Title first
 1.9.1
 - Unterstützung für Playready unter Android
 - Mehr Medieninformationen + Cachen der Informationen

@@ -428,7 +428,6 @@ def getInfoLabel(asset_type, item_data, mediainfo = {}):
         info['plot'] = data.get('teaser_long', '')
         info['genre'] = data.get('item_category_name', '')
     if asset_type == 'live':
-        channel = '[COLOR blue]' + item_data['channel']['name'] + ' | [/COLOR]'
         info['title'] = item_data['event'].get('subtitle', '')
         info['plot'] = item_data['event'].get('subtitle', '')
         if not item_data['channel']['msMediaUrl'].startswith('http://'):
@@ -445,7 +444,12 @@ def getInfoLabel(asset_type, item_data, mediainfo = {}):
                 asset_type = 'Episode'
                 info['plot'] = 'Folge: ' + data.get('title', '') + '\n\n' + data.get('synopsis', '').replace('\n', '').strip()
                 info['title'] = '%1dx%02d. %s' % (data.get('season_nr', ''), data.get('episode_nr', ''), data.get('serie_title', ''))
-        info['title'] = channel + info['title'] 
+        if xbmcaddon.Addon().getSetting('channel_name_first') == 'true':
+            channel = '[COLOR blue]' + item_data['channel']['name'] + ' | [/COLOR]'
+            info['title'] = channel + info['title']
+        else:
+            channel = '[COLOR blue] | ' + item_data['channel']['name'] + '[/COLOR]'
+            info['title'] += channel               
     if asset_type == 'searchresult':
         info['plot'] = data.get('description', '')
         info['year'] = data.get('year', '')
