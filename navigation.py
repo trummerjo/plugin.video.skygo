@@ -21,8 +21,10 @@ except:
     import storageserverdummy as StorageServer
 
 addon = xbmcaddon.Addon()
+
+# Doc for Caching Function: http://kodi.wiki/index.php?title=Add-on:Common_plugin_cache
 assetDetailsCache = StorageServer.StorageServer(addon.getAddonInfo('name') + '.assetdetails', 24 * 30)
-ratingCache = StorageServer.StorageServer(addon.getAddonInfo('name') + '.rating', 24 * 30)
+TMDBCache = StorageServer.StorageServer(addon.getAddonInfo('name') + '.TMDBdetails', 24 * 30)
 
 extMediaInfos = addon.getSetting('enable_extended_mediainfos')
 addon_handle = int(sys.argv[1])
@@ -383,6 +385,7 @@ def getInfoLabel(asset_type, item_data):
             except:
                 pass 
     info = {}
+    info['TMDb_poster_path'] = None # only set when TMDB Data is collected)
     info['title'] = data.get('title', '')
     info['originaltitle'] = data.get('original_title', '')
     if not data.get('year_of_production', '') == '':
@@ -453,14 +456,18 @@ def getInfoLabel(asset_type, item_data):
         info['genre'] = data.get('category', '')
     if asset_type == 'Film':
         info['mediatype'] = 'movie'
-        if xbmcaddon.Addon().getSetting('lookup_tmdb_rating') == 'true' and not data.get('title', '') == '': 
+        if xbmcaddon.Addon().getSetting('lookup_tmdb_data') == 'true' and not data.get('title', '') == '': 
             title = data.get('title', '').encode("utf-8") 
-            xbmc.log('Searching Rating for %s at tmdb.com' % title.upper())
-            rating = getTMDBRatingFromCache(title)
-            if rating['rating'] is not None:
-                info['rating'] = str(rating['rating'])
+            xbmc.log('Searching Rating and better Poster for %s at tmdb.com' % title.upper())
+            TMDb_Data = getTMDBDataFromCache(title)
+            # xbmc.log('Debug-Info: TMDb_Data: %s' % TMDb_Data)
+            if TMDb_Data['rating'] is not None:
+                info['rating'] = str(TMDb_Data['rating'])
                 info['plot'] = 'User-Rating: '+ info['rating'] + ' / 10 (from TMDb) \n\n' + info['plot']
-                xbmc.log( "Result of get Rating: %s" % (rating) )                
+                xbmc.log( "Result of get Rating: %s" % (TMDb_Data['rating']) )  
+            if TMDb_Data['poster_path'] is not None:
+                info['TMDb_poster_path'] = TMDb_Data['poster_path']            
+                xbmc.log( "Path to TMDb Picture: %s" % (TMDb_Data['poster_path']) )                 
     if asset_type == 'Series':
         info['year'] = data.get('year_of_production_start', '')
     if asset_type == 'Episode':
@@ -470,7 +477,7 @@ def getInfoLabel(asset_type, item_data):
         info['tvshowtitle'] = data.get('serie_title', '')
         if info['title'] == '':
             info['title'] = '%s - S%02dE%02d' % (data.get('serie_title', ''), data.get('season_nr', 0), data.get('episode_nr', 0))
-
+    # xbmc.log( "Debug_Info Current info Element: %s" % (info) ) 
     return info
 
 def getWatchlistContextItem(item, delete=False):
@@ -497,11 +504,19 @@ def listAssets(asset_list, isWatchlist=False):
                     if not skygo.parentalCheck(item['data']['parental_rating']['value'], play=False):   
                         continue
             info = getInfoLabel(item['type'], item['data'])
+            # xbmc.log( "Debug_Info Current item Element: %s" % (item) ) 
             li.setInfo('video', info)
-            li.setLabel(info['title'])
-            li.setArt({'poster': getPoster(item['data']), 'fanart': getHeroImage(item['data'])})       
+            li.setLabel(info['title'])         
+            li.setArt({'poster': getPoster(item['data']), 'fanart': getHeroImage(item['data'])})           
         if item['type'] in ['Film']:
             xbmcplugin.setContent(addon_handle, 'movies')
+            if xbmcaddon.Addon().getSetting('lookup_tmdb_data') == 'true' and info['TMDb_poster_path'] is not None:
+                poster_path = info['TMDb_poster_path'] 
+            else:
+                poster_path = getPoster(item['data'])
+            # xbmc.log('Debug-Info: Current Poster in item: %s' % getPoster(item['data']) ) 
+            # xbmc.log('Debug-Info: Current Poster in info: %s' % info['TMDb_poster_path'] )    
+            li.setArt({'poster': poster_path})
         elif item['type'] in ['Series']:
             xbmcplugin.setContent(addon_handle, 'tvshows')
             isPlayable = False
@@ -594,11 +609,12 @@ def listPage(page_id):
 def getAssetDetailsFromCache(asset_id):
     return assetDetailsCache.cacheFunction(skygo.getAssetDetails, asset_id)
 
-def getTMDBRatingFromCache(title, attempt = 1, content='movie', year=None):
-    return ratingCache.cacheFunction(getTMDBRating, title, attempt, content, year)
+def getTMDBDataFromCache(title, attempt = 1, content='movie', year=None):
+    return TMDBCache.cacheFunction(getTMDBData, title, attempt, content, year)
 
-def getTMDBRating(title, attempt = 1, content='movie', year=None):
+def getTMDBData(title, attempt = 1, content='movie', year=None):
     rating = None
+    poster_path = None
     splitter = [' - ', ': ', ', ']
     yearorg = year
     tmdb_api = base64.b64decode('YTAwYzUzOTU0M2JlMGIwODE4YmMxOTRhN2JkOTVlYTU=') # ApiKey Linkinsoldier
@@ -617,6 +633,8 @@ def getTMDBRating(title, attempt = 1, content='movie', year=None):
             result = data['results'][0]
             if result['vote_average']:
                 rating = float(result['vote_average'])
+            if result['poster_path']:
+                poster_path = 'https://image.tmdb.org/t/p/w640' + str(result['poster_path'])
             tmdb_id = result['id']
         else:
             xbmc.log('No movie found with Title: %s' % title )
@@ -632,6 +650,6 @@ def getTMDBRating(title, attempt = 1, content='movie', year=None):
                 xbmc.sleep(10000)
             xbmc.log(logout)
             if attempt < 3:
-                return getTMDBRating(title, attempt)
-        return {'rating': rating}
-    return {'rating': rating}
+                return getTMDBData(title, attempt)
+        return {'rating': rating, 'poster_path': poster_path}
+    return {'rating': rating , 'poster_path': poster_path}
