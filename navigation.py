@@ -615,6 +615,7 @@ def getTMDBDataFromCache(title, attempt = 1, content='movie', year=None):
 def getTMDBData(title, attempt = 1, content='movie', year=None):
     rating = None
     poster_path = None
+    tmdb_id = None
     splitter = [' - ', ': ', ', ']
     yearorg = year
     tmdb_api = base64.b64decode('YTAwYzUzOTU0M2JlMGIwODE4YmMxOTRhN2JkOTVlYTU=') # ApiKey Linkinsoldier
@@ -651,5 +652,5 @@ def getTMDBData(title, attempt = 1, content='movie', year=None):
             xbmc.log(logout)
             if attempt < 3:
                 return getTMDBData(title, attempt)
-        return {'rating': rating, 'poster_path': poster_path}
-    return {'rating': rating , 'poster_path': poster_path}
+        return {'tmdb_id': tmdb_id, 'title': title, 'rating': rating , 'poster_path': poster_path}
+    return {'tmdb_id': tmdb_id, 'title': title, 'rating': rating , 'poster_path': poster_path}
