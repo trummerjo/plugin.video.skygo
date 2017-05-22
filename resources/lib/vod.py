@@ -7,7 +7,7 @@ skygo = SkyGo()
 def playAsset(asset_id):
     #get asset details and build infotag from it
     asset_info = skygo.getAssetDetails(asset_id)
-    info_tag = nav.getInfoLabel(asset_info.get('type', ''), asset_info)
+    info_tag, asset_info = nav.getInfoLabel(asset_info.get('type', ''), asset_info)
     manifest_url = asset_info['media_url']
     if 'ms_media_url' in asset_info:
         manifest_url = asset_info['ms_media_url']
