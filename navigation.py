@@ -263,7 +263,7 @@ def listEpisodesFromSeason(series_id, season_id):
                 li = xbmcgui.ListItem()
                 li.setProperty('IsPlayable', 'true')
                 li.addContextMenuItems(getWatchlistContextItem({'type': 'Episode', 'data': episode}), replaceItems=False)
-                info = getInfoLabel('Episode', episode)
+                info, episode = getInfoLabel('Episode', episode)
                 li.setInfo('video', info)
                 li.setLabel('%02d. %s' % (info['episode'], info['title']))
                 li.setArt({'poster': skygo.baseUrl + season['path'], 
@@ -402,7 +402,6 @@ def getInfoLabel(asset_type, item_data):
             except:
                 pass 
     info = {}
-    info['TMDb_poster_path'] = None # only set when TMDB Data is collected)
     info['title'] = data.get('title', '')
     info['originaltitle'] = data.get('original_title', '')
     if not data.get('year_of_production', '') == '':
@@ -484,7 +483,7 @@ def getInfoLabel(asset_type, item_data):
                 info['plot'] = 'User-Rating: '+ info['rating'] + ' / 10 (from TMDb) \n\n' + info['plot']
                 xbmc.log( "Result of get Rating: %s" % (TMDb_Data['rating']) )  
             if TMDb_Data['poster_path'] is not None:
-                info['TMDb_poster_path'] = TMDb_Data['poster_path']            
+                item_data['TMDb_poster_path'] = TMDb_Data['poster_path']            
                 xbmc.log( "Path to TMDb Picture: %s" % (TMDb_Data['poster_path']) )                 
     if asset_type == 'Series':
         info['year'] = data.get('year_of_production_start', '')
@@ -496,7 +495,7 @@ def getInfoLabel(asset_type, item_data):
         if info['title'] == '':
             info['title'] = '%s - S%02dE%02d' % (data.get('serie_title', ''), data.get('season_nr', 0), data.get('episode_nr', 0))
     # xbmc.log( "Debug_Info Current info Element: %s" % (info) ) 
-    return info
+    return info, item_data
 
 def getWatchlistContextItem(item, delete=False):
     label = 'Zur Merkliste hinzufügen'
@@ -521,19 +520,19 @@ def listAssets(asset_list, isWatchlist=False):
                 if js_showall == 'false':
                     if not skygo.parentalCheck(item['data']['parental_rating']['value'], play=False):   
                         continue
-            info = getInfoLabel(item['type'], item['data'])
+            info, item['data'] = getInfoLabel(item['type'], item['data'])
             # xbmc.log( "Debug_Info Current item Element: %s" % (item) ) 
             li.setInfo('video', info)
             li.setLabel(info['title'])         
             li.setArt({'poster': getPoster(item['data']), 'fanart': getHeroImage(item['data'])})           
         if item['type'] in ['Film']:
             xbmcplugin.setContent(addon_handle, 'movies')
-            if xbmcaddon.Addon().getSetting('lookup_tmdb_data') == 'true' and info['TMDb_poster_path'] is not None:
-                poster_path = info['TMDb_poster_path'] 
+            if xbmcaddon.Addon().getSetting('lookup_tmdb_data') == 'true' and 'TMDb_poster_path' in item['data']:
+                poster_path = item['data']['TMDb_poster_path'] 
             else:
                 poster_path = getPoster(item['data'])
             # xbmc.log('Debug-Info: Current Poster in item: %s' % getPoster(item['data']) ) 
-            # xbmc.log('Debug-Info: Current Poster in info: %s' % info['TMDb_poster_path'] )    
+            # xbmc.log('Debug-Info: Current Poster in info: %s' % item['data']['TMDb_poster_path'] )    
             li.setArt({'poster': poster_path})
         elif item['type'] in ['Series']:
             xbmcplugin.setContent(addon_handle, 'tvshows')
@@ -547,8 +546,8 @@ def listAssets(asset_list, isWatchlist=False):
             xbmcplugin.setContent(addon_handle, 'movies')
         elif item['type'] == ('live'):
             xbmcplugin.setContent(addon_handle, 'movies')
-            if 'TMDb_poster_path' in info:
-                poster = info['TMDb_poster_path']
+            if 'TMDb_poster_path' in item['data']:
+                poster = item['data']['TMDb_poster_path']
             elif 'mediainfo' in item['data']:
                 poster = getPoster(item['data']['mediainfo'])
             else:
@@ -648,8 +647,8 @@ def getTMDBData(title, attempt = 1, content='movie', year=None):
         #Define the moviedb Link zu download the json
         host = 'http://api.themoviedb.org/3/search/%s?api_key=%s&language=%s&query=%s%s' % (content, tmdb_api, Language, movie, str_year)
         #Download and load the corresponding json
-        data = json.load(urllib2.urlopen(host))    
-    
+        data = json.load(urllib2.urlopen(host))
+         
         if data['total_results'] > 0:
             result = data['results'][0]
             if result['vote_average']:
