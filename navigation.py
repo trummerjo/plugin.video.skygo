@@ -546,11 +546,13 @@ def listAssets(asset_list, isWatchlist=False):
         elif item['type'] == 'searchresult':          
             xbmcplugin.setContent(addon_handle, 'movies')
         elif item['type'] == ('live'):
-            xbmcplugin.setContent(addon_handle, 'files')
-            if 'mediainfo' in item['data']:
-                 poster = getPoster(item['data']['mediainfo'])
+            xbmcplugin.setContent(addon_handle, 'movies')
+            if 'TMDb_poster_path' in info:
+                poster = info['TMDb_poster_path']
+            elif 'mediainfo' in item['data']:
+                poster = getPoster(item['data']['mediainfo'])
             else:
-                 poster = getPoster(item['data']['channel'])
+                poster = getPoster(item['data']['channel'])
             fanart = skygo.baseUrl + item['data']['event']['image'] if item['data']['channel']['name'].find('News') == -1 else skygo.baseUrl + '/bin/Picture/817/C_1_Picture_7179_content_4.jpg'
             thumb = skygo.baseUrl + item['data']['event']['image'] if item['data']['channel']['name'].find('News') == -1 else getChannelLogo(item['data']['channel'])
             li.setArt({'poster': poster, 'fanart': fanart, 'thumb': thumb})

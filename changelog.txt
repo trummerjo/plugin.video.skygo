@@ -1,5 +1,6 @@
 1.9.5
 - Anzeige von allen Bundesliga- und Sport-Optionskanälen
+- TMDb-Poster für Cinema-Kanäle (LiveTV) nutzen
 1.9.4
 - Anstatt Sky Poster wird nun das Poster von TMDb verwendet, wenn die Option in den Einstellungen aktiviert ist - wegen schlechter Qualität Sky Poster
 1.9.3
