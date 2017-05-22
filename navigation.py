@@ -25,7 +25,7 @@ addon = xbmcaddon.Addon()
 
 # Doc for Caching Function: http://kodi.wiki/index.php?title=Add-on:Common_plugin_cache
 assetDetailsCache = StorageServer.StorageServer(addon.getAddonInfo('name') + '.assetdetails', 24 * 30)
-TMDBCache = StorageServer.StorageServer(addon.getAddonInfo('name') + '.TMDBdetails', 24 * 30)
+TMDBCache = StorageServer.StorageServer(addon.getAddonInfo('name') + '.TMDBdata', 24 * 30)
 
 extMediaInfos = addon.getSetting('enable_extended_mediainfos')
 addon_handle = int(sys.argv[1])
@@ -476,7 +476,10 @@ def getInfoLabel(asset_type, item_data):
         if xbmcaddon.Addon().getSetting('lookup_tmdb_data') == 'true' and not data.get('title', '') == '': 
             title = data.get('title', '').encode("utf-8") 
             xbmc.log('Searching Rating and better Poster for %s at tmdb.com' % title.upper())
-            TMDb_Data = getTMDBDataFromCache(title)
+            if not data.get('year_of_production', '') == '':
+                TMDb_Data = getTMDBDataFromCache(title, info['year'])
+            else:
+                TMDb_Data = getTMDBDataFromCache(title)
             # xbmc.log('Debug-Info: TMDb_Data: %s' % TMDb_Data)
             if TMDb_Data['rating'] is not None:
                 info['rating'] = str(TMDb_Data['rating'])
@@ -545,7 +548,7 @@ def listAssets(asset_list, isWatchlist=False):
         elif item['type'] == 'searchresult':          
             xbmcplugin.setContent(addon_handle, 'movies')
         elif item['type'] == ('live'):
-            xbmcplugin.setContent(addon_handle, 'movies')
+            xbmcplugin.setContent(addon_handle, 'files')
             if 'TMDb_poster_path' in item['data']:
                 poster = item['data']['TMDb_poster_path']
             elif 'mediainfo' in item['data']:
@@ -628,15 +631,14 @@ def listPage(page_id):
 def getAssetDetailsFromCache(asset_id):
     return assetDetailsCache.cacheFunction(skygo.getAssetDetails, asset_id)
 
-def getTMDBDataFromCache(title, attempt = 1, content='movie', year=None):
-    return TMDBCache.cacheFunction(getTMDBData, title, attempt, content, year)
+def getTMDBDataFromCache(title, year = None, attempt = 1, content='movie'):
+    return TMDBCache.cacheFunction(getTMDBData, title, year, attempt, content)
 
-def getTMDBData(title, attempt = 1, content='movie', year=None):
+def getTMDBData(title, year=None, attempt = 1, content='movie'):
     rating = None
     poster_path = None
     tmdb_id = None
     splitter = [' - ', ': ', ', ']
-    yearorg = year
     tmdb_api = base64.b64decode('YTAwYzUzOTU0M2JlMGIwODE4YmMxOTRhN2JkOTVlYTU=') # ApiKey Linkinsoldier
     # tmdb_api = base64.b64decode('YjM0NDkwYzA1NmYwZGQ5ZTNlYzlhZjIxNjdhNzMxZjQ=') # ApiKey from Sandman's Amazon VOD Addon
     Language = 'de'
@@ -656,20 +658,21 @@ def getTMDBData(title, attempt = 1, content='movie', year=None):
             if result['poster_path']:
                 poster_path = 'https://image.tmdb.org/t/p/w640' + str(result['poster_path'])
             tmdb_id = result['id']
+        elif year is not None:
+            attempt += 1
+            xbmc.log('Try again - without release year - to find Title: %s' % title )
+            return getTMDBData(title, None, attempt)
         else:
             xbmc.log('No movie found with Title: %s' % title )
         
     except (urllib2.URLError), e:
         xbmc.log('Error reason: %s' % e )
-
+        
         if '429' or 'timed out' in e:
             attempt += 1
-            logout = 'Attempt #%s' % attempt
-            if '429' in e:
-                logout += '. Too many requests - Pause 10 sec'
-                xbmc.sleep(10000)
-            xbmc.log(logout)
-            if attempt < 3:
-                return getTMDBData(title, attempt)
+            xbmc.log('Attempt #%s - Too many requests - Pause 5 sec' % attempt)
+            xbmc.sleep(5000)
+            if attempt < 4:
+                return getTMDBData(title, year, attempt)
         return {'tmdb_id': tmdb_id, 'title': title, 'rating': rating , 'poster_path': poster_path}
     return {'tmdb_id': tmdb_id, 'title': title, 'rating': rating , 'poster_path': poster_path}

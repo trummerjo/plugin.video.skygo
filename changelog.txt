@@ -1,3 +1,6 @@
+1.9.6
+- Um Trefferwahrscheinlichkeit auf TMDB zu erhöhen, wird - sofern vorhanden - zunächst nach dem Titel inkl. Releasehahr gesucht und erst wenn kein Result kommt (weil Sky die falsche Info gibt), so wird ohne der Titel nochmal ohne Jahr gesucht + Error Handling verbessert
+- Anzeige Live-TV Übersicht verbessert
 1.9.5
 - Anzeige von allen Bundesliga- und Sport-Optionskanälen
 - TMDb-Poster für Cinema-Kanäle (LiveTV) nutzen
