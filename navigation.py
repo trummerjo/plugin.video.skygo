@@ -14,6 +14,7 @@ import watchlist
 import re
 import urllib
 import base64
+from HTMLParser import HTMLParser
 
 try:
     import StorageServer
@@ -30,6 +31,7 @@ extMediaInfos = addon.getSetting('enable_extended_mediainfos')
 addon_handle = int(sys.argv[1])
 icon_file = xbmc.translatePath(addon.getAddonInfo('path')+'/icon.png').decode('utf-8')
 skygo = SkyGo()
+htmlparser = HTMLParser()
 
 #Blacklist: diese nav_ids nicht anzeigen
 #Sport: Datencenter, NewsSection, Aktuell, Snap
@@ -126,7 +128,7 @@ def getPoster(data):
     if data.get('picture', '') != '':
         return skygo.baseUrl + data['picture']
     if data.get('logo', '') != '':
-	    return skygo.baseUrl + data['logo']
+        return skygo.baseUrl + data['logo']
 
     return ''
 
@@ -185,21 +187,34 @@ def listLiveTvChannelDirs():
     xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=True)
 
 def listLiveTvChannels(channeldir_name):
-    data = getlistLiveChannelData()
+    data = getlistLiveChannelData(channeldir_name)
     for tab in data:
         if tab['tabName'].lower() == channeldir_name.lower():
-            mediaurls = {}
+            details = {}
             for event in tab['eventList']:
-                media_url = ''
-                mediainfo = {}
-                if event['channel']['msMediaUrl'].startswith('http://'):
-                    if event['event']['detailPage'].startswith('http://'):
-                        media_url = event['event']['detailPage']
-                    else:
-                        media_url = str(event['event']['cmsid'])
-                    url = common.build_url({'action': 'playLive', 'channel_id': event['channel']['id']})
-                elif event['event']['detailPage'].startswith('http://'):
-                    media_url = event['event']['detailPage']
+                if event['event']['detailPage'].startswith("http"):
+                    detail = event['event']['detailPage']
+                else:
+                    detail = str(event['event']['cmsid'])
+                if 'assetid' not in event['event']:
+                    assetid_match = re.search('\/([0-9]*)\.html', event['event']['detailPage'])
+                    if assetid_match:
+                        assetid = int(assetid_match.group(1))
+                        try:
+                            if assetid > 0:
+                                mediainfo = getAssetDetailsFromCache(assetid)
+                                event['mediainfo'] = mediainfo
+                                manifest_url = mediainfo['media_url']
+                                if not manifest_url.startswith('http://'):
+                                    continue
+                        except:
+                            continue
+                    url = common.build_url({'action': 'playLive', 'manifest_url': manifest_url, 'package_code': event['channel']['mobilepc']})
+                elif event['channel']['msMediaUrl'].startswith('http://'):
+                    manifest_url = event['channel']['msMediaUrl']
+                    url = common.build_url({'action': 'playLive', 'manifest_url': manifest_url, 'package_code': event['channel']['mobilepc']})
+
+                else:                    
                     url = common.build_url({'action': 'playVod', 'vod_id': event['event']['assetid']})
                     try:
                         if event['event']['assetid'] > 0:
@@ -209,16 +224,19 @@ def listLiveTvChannels(channeldir_name):
                         pass
 
                 #zeige keine doppelten sender mit gleichem stream - nutze hd falls verfügbar
-                if media_url != '':
-                    if not media_url in mediaurls.keys():                 
-                        mediaurls[media_url] = {'type': 'live', 'label': event['channel']['name'], 'url': url, 'data': event}
-                    elif mediaurls[media_url]['data']['channel']['hd'] == 0 and event['channel']['hd'] == 1 and event['channel']['name'].find('+') == -1:
-                        mediaurls[media_url] = {'type': 'live', 'label': event['channel']['name'], 'url': url, 'data': event}
+                if detail != '':
+                    if not detail in details.keys():                 
+                        details[detail] = {'type': 'live', 'label': event['channel']['name'], 'url': url, 'data': event}
+                    elif details[detail]['data']['channel']['hd'] == 0 and event['channel']['hd'] == 1 and event['channel']['name'].find('+') == -1:
+                        details[detail] = {'type': 'live', 'label': event['channel']['name'], 'url': url, 'data': event}
 
-            listAssets(sorted(mediaurls.values(), key=lambda k:k['data']['channel']['name']))
+            listAssets(sorted(details.values(), key=lambda k:k['data']['channel']['name']))
 
-def getlistLiveChannelData():
-    url = 'http://www.skygo.sky.de/epgd/sg/ipad/excerpt/'
+def getlistLiveChannelData(channel = ''):
+    version = 'ipad'
+    if channel.lower() == 'bundesliga' or channel.lower() == 'sport':
+        version = 'web'
+    url = 'http://www.skygo.sky.de/epgd/sg/' + version + '/excerpt/'
     data = requests.get(url).json()
     data = [json for json in data if json['tabName'] != 'welt']
     for tab in data:
@@ -226,8 +244,7 @@ def getlistLiveChannelData():
             tab['tabName'] = 'cinema'
         elif tab['tabName'] == 'buli':
             tab['tabName'] = 'bundesliga'
-    return sorted(data, key=lambda k: k['tabName'])
-    
+    return sorted(data, key=lambda k: k['tabName'])    
 
 def listEpisodesFromSeason(series_id, season_id):
     url = skygo.baseUrl + '/sg/multiplatform/web/json/details/series/' + str(series_id) + '_global.json'
@@ -428,9 +445,10 @@ def getInfoLabel(asset_type, item_data):
         info['plot'] = data.get('teaser_long', '')
         info['genre'] = data.get('item_category_name', '')
     if asset_type == 'live':
+        item_data['event']['subtitle'] = htmlparser.unescape(item_data['event'].get('subtitle', ''))
         info['title'] = item_data['event'].get('subtitle', '')
-        info['plot'] = item_data['event'].get('subtitle', '')
-        if not item_data['channel']['msMediaUrl'].startswith('http://'):
+        info['plot'] = data.get('synopsis', '').replace('\n', '').strip() if data.get('synopsis', '') != '' else item_data['event'].get('subtitle', '')
+        if 'assetid' in item_data['event'] and not item_data['channel']['msMediaUrl'].startswith('http://'):
             if 'mediainfo' in item_data:
                 info['title'] = data.get('title', '')
                 info['plot'] = data.get('synopsis', '').replace('\n', '').strip()
@@ -623,12 +641,12 @@ def getTMDBData(title, attempt = 1, content='movie', year=None):
     Language = 'de'
     str_year = '&year=' + str(year) if year else ''
     movie = urllib.quote_plus(title)
-	
+    
     try:
-		#Define the moviedb Link zu download the json
+        #Define the moviedb Link zu download the json
         host = 'http://api.themoviedb.org/3/search/%s?api_key=%s&language=%s&query=%s%s' % (content, tmdb_api, Language, movie, str_year)
-		#Download and load the corresponding json
-        data = json.load(urllib2.urlopen(host))	
+        #Download and load the corresponding json
+        data = json.load(urllib2.urlopen(host))    
     
         if data['total_results'] > 0:
             result = data['results'][0]

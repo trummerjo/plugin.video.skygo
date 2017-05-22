@@ -1,13 +1,15 @@
+1.9.5
+- Anzeige von allen Bundesliga- und Sport-Optionskanälen
 1.9.4
 - Anstatt Sky Poster wird nun das Poster von TMDb verwendet, wenn die Option in den Einstellungen aktiviert ist - wegen schlechter Qualität Sky Poster
 1.9.3
-- DeviceId in die Usersettings verschoben. Die ID ist dabei eine zufällige Uuid, die beim ersten Start von Skygo generiert wird.
-Das bedeutet für diejenigen, die die erste Version nutzen und dann updaten, dass eine neue Geräteregistrierung erfolgen wird. 
+- Codeoptimierung
 1.9.2
 - Fix LiveTV-Bug: No longer set "LiveTV" in Content since it doesnt seem to be supported
 - Create Setting Option to choose LiveTV Display Option: Channel name or Title first
 1.9.1
 - Unterstützung für Playready unter Android
+  -> DeviceId in die Usersettings verschoben. Die ID ist dabei eine zufällige Uuid, die beim ersten Start von Skygo generiert wird. Das bedeutet für diejenigen, die die erste Version nutzen und dann updaten, dass eine neue Geräteregistrierung erfolgen wird. 
 - Mehr Medieninformationen + Cachen der Informationen
 - Mehr Sortieroptionen
 - Anzeige von allen Livessendern, wie auf skygo.sky.de + Gruppierung nach Paketen (Bundesliga/Cinema/Entertainment/Sport)

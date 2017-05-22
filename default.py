@@ -22,7 +22,7 @@ if 'action' in params:
     elif params['action'] == 'playClip':
         clips.playClip(params['id'])
     elif params['action'] == 'playLive':
-        liveTv.playLiveTv(params['channel_id'])
+        liveTv.playLiveTv(params['manifest_url'], params['package_code'])
 
     elif params['action'] == 'listLiveTvChannelDirs':
         nav.listLiveTvChannelDirs()
