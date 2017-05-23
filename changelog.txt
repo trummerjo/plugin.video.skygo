@@ -1,3 +1,6 @@
+1.9.7
+- Hinweis eingebaut, dass die User-Ratings und Poster von TMDb bezogen werden.
+- Smoothstream Addon entfernt
 1.9.6
 - Um Trefferwahrscheinlichkeit auf TMDB zu erhöhen, wird - sofern vorhanden - zunächst nach dem Titel inkl. Releasehahr gesucht und erst wenn kein Result kommt (weil Sky die falsche Info gibt), so wird ohne der Titel nochmal ohne Jahr gesucht + Error Handling verbessert
 - Anzeige Live-TV Übersicht verbessert

@@ -635,12 +635,12 @@ def getTMDBDataFromCache(title, year = None, attempt = 1, content='movie'):
     return TMDBCache.cacheFunction(getTMDBData, title, year, attempt, content)
 
 def getTMDBData(title, year=None, attempt = 1, content='movie'):
+    #This product uses the TMDb API but is not endorsed or certified by TMDb.
     rating = None
     poster_path = None
     tmdb_id = None
     splitter = [' - ', ': ', ', ']
     tmdb_api = base64.b64decode('YTAwYzUzOTU0M2JlMGIwODE4YmMxOTRhN2JkOTVlYTU=') # ApiKey Linkinsoldier
-    # tmdb_api = base64.b64decode('YjM0NDkwYzA1NmYwZGQ5ZTNlYzlhZjIxNjdhNzMxZjQ=') # ApiKey from Sandman's Amazon VOD Addon
     Language = 'de'
     str_year = '&year=' + str(year) if year else ''
     movie = urllib.quote_plus(title)
