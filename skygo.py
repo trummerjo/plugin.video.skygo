@@ -49,13 +49,11 @@ if platform == osAndroid:
 
 # Get installed inputstream addon
 def getInputstreamAddon():
-    is_types = ['inputstream.adaptive', 'inputstream.smoothstream']
-    for i in is_types:
-        r = xbmc.executeJSONRPC('{"jsonrpc": "2.0", "id": 1, "method": "Addons.GetAddonDetails", "params": {"addonid":"' + i + '", "properties": ["enabled"]}}')
-        data = json.loads(r)
-        if not "error" in data.keys():
-            if data["result"]["addon"]["enabled"] == True:
-                return i
+    r = xbmc.executeJSONRPC('{"jsonrpc": "2.0", "id": 1, "method": "Addons.GetAddonDetails", "params": {"addonid":"inputstream.adaptive", "properties": ["enabled"]}}')
+    data = json.loads(r)
+    if not "error" in data.keys():
+        if data["result"]["addon"]["enabled"] == True:
+            return True
         
     return None
 
@@ -259,6 +257,12 @@ class SkyGo:
         return True
 
     def play(self, manifest_url, package_code, parental_rating=0, info_tag=None, apix_id=None):
+        # Inputstream settings
+        is_addon = getInputstreamAddon()
+        if not is_addon:
+            xbmcgui.Dialog().notification('SkyGo Fehler', 'Addon "inputstream.adaptive" fehlt!', xbmcgui.NOTIFICATION_ERROR, 2000, True)
+            return False
+        
         #Jugendschutz
         if not self.parentalCheck(parental_rating, play=True):
             xbmcgui.Dialog().notification('SkyGo - FSK ' + str(parental_rating), 'Keine Berechtigung zum Abspielen dieses Eintrages', xbmcgui.NOTIFICATION_ERROR, 2000, True)
@@ -274,18 +278,13 @@ class SkyGo:
                 li = xbmcgui.ListItem(path=manifest_url)
                 if info_tag:
                     li.setInfo('video', info_tag)
-                # Inputstream settings
-                is_addon = getInputstreamAddon()
-                if not is_addon:
-                    xbmcgui.Dialog().notification('SkyGo Fehler', 'Inputstream Addon fehlt!', xbmcgui.NOTIFICATION_ERROR, 2000, True)
-                    return False
 
-                li.setProperty(is_addon + '.license_type', self.license_type)
-                li.setProperty(is_addon + '.manifest_type', 'ism')
+                li.setProperty('inputstream.adaptive.license_type', self.license_type)
+                li.setProperty('inputstream.adaptive.manifest_type', 'ism')
                 if init_data:
-                    li.setProperty(is_addon + '.license_key', self.license_url)
-                    li.setProperty(is_addon + '.license_data', init_data)
-                li.setProperty('inputstreamaddon', is_addon)
+                    li.setProperty('inputstream.adaptive.license_key', self.license_url)
+                    li.setProperty('inputstream.adaptive.license_data', init_data)
+                li.setProperty('inputstreamaddon', 'inputstream.adaptive')
                 # Start Playing
                 xbmcplugin.setResolvedUrl(addon_handle, True, listitem=li)
             else:
