@@ -9,21 +9,10 @@ addon_handle = int(sys.argv[1])
 addon = xbmcaddon.Addon()
 skygo = SkyGo()
 
-def playLiveTv(channel_id):
+def playLiveTv(manifest_url, package_code):
     #hardcoded apixId for live content
     apix_id = 'livechannel_127'
-    url = 'http://www.skygo.sky.de/epgd/sg/ipad/excerpt/'
-    r = requests.get(url)
-    data = r.json()
-    for tab in data:
-        for channel in tab['eventList']:
-            if channel['channel']['id'] == channel_id:
-                if 'msMediaUrl' in channel['channel']:
-                    skygo.play(channel['channel']['msMediaUrl'], channel['channel']['mobilepc'], apix_id=apix_id)
-                elif 'assetid' in channel['channel']['event']:
-                    pass
-                    #todo play asset from archive - actually not needed
-                return
+    skygo.play(manifest_url, package_code, apix_id=apix_id)
 
 def play_live_tv(epg_channel_id):
     # Get Current running event on channel
@@ -50,14 +39,13 @@ def play_live_tv(epg_channel_id):
             'mediatype': 'movie',
         }
         li.setInfo('video', info)
-        li.setProperty('inputstream.smoothstream.license_type', 'com.widevine.alpha')
-        li.setProperty('inputstream.smoothstream.license_key', skygo.licence_url)
-        li.setProperty('inputstream.smoothstream.license_data', init_data)
-        li.setProperty('inputstreamaddon', 'inputstream.smoothstream')
+        li.setProperty('inputstream.adaptive.license_type', skygo.license_type)
+        li.setProperty('inputstream.adaptive.manifest_type', 'ism')
+        if init_data:
+            li.setProperty('inputstream.adaptive.license_key', skygo.licence_url)
+            li.setProperty('inputstream.adaptive.license_data', init_data)
+        li.setProperty('inputstreamaddon', 'inputstream.adaptive')
 
         xbmcplugin.setResolvedUrl(addon_handle, True, listitem=li)
-
-
     else:
         xbmcgui.Dialog().notification('Kein laufendes Event', 'Auf diesem Kanal ist kein laufendes Event vorhanden.', icon=xbmcgui.NOTIFICATION_WARNING)
-

@@ -1,3 +1,37 @@
+1.9.7
+- Hinweis eingebaut, dass die User-Ratings und Poster von TMDb bezogen werden.
+- Smoothstream Addon entfernt
+1.9.6
+- Um Trefferwahrscheinlichkeit auf TMDB zu erhöhen, wird - sofern vorhanden - zunächst nach dem Titel inkl. Releasehahr gesucht und erst wenn kein Result kommt (weil Sky die falsche Info gibt), so wird ohne der Titel nochmal ohne Jahr gesucht + Error Handling verbessert
+- Anzeige Live-TV Übersicht verbessert
+1.9.5
+- Anzeige von allen Bundesliga- und Sport-Optionskanälen
+- TMDb-Poster für Cinema-Kanäle (LiveTV) nutzen
+1.9.4
+- Anstatt Sky Poster wird nun das Poster von TMDb verwendet, wenn die Option in den Einstellungen aktiviert ist - wegen schlechter Qualität Sky Poster
+1.9.3
+- Codeoptimierung
+1.9.2
+- Fix LiveTV-Bug: No longer set "LiveTV" in Content since it doesnt seem to be supported
+- Create Setting Option to choose LiveTV Display Option: Channel name or Title first
+1.9.1
+- Unterstützung für Playready unter Android
+  -> DeviceId in die Usersettings verschoben. Die ID ist dabei eine zufällige Uuid, die beim ersten Start von Skygo generiert wird. Das bedeutet für diejenigen, die die erste Version nutzen und dann updaten, dass eine neue Geräteregistrierung erfolgen wird. 
+- Mehr Medieninformationen + Cachen der Informationen
+- Mehr Sortieroptionen
+- Anzeige von allen Livessendern, wie auf skygo.sky.de + Gruppierung nach Paketen (Bundesliga/Cinema/Entertainment/Sport)
+- Automatisches Scrappen und Cachen von TMDb Filmen in den Settings - Option in den Settings deaktivierbar
+1.0.8.1
+- Anpassung für xbmc.gui 5.13.0
+1.0.8
+- Anpassung für inputstream.adaptive Addon
+1.0.7
+- Jungendschutz Einstellungen hinzugefügt
+1.0.3
+1.0.2
+- Ausblenden von doppelten Einträgen mit gleichen Streams bei den Livesendern
+1.0.1
+- Zeitangabe bei LivePlaner Events hinzugefügt (thx @ eric1905)
 1.0.0
 - Unterstützung für Sport Wiederholungen und Mediatheken
 - Livesender auch bei nicht Live-Events (derzeit werden von Sky nur Sportsender angeboten)
